@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
+import { api } from '@/lib/api';
 import type { SiteObject, Visit } from '@/pages/Index';
 
 interface CreateVisitScreenProps {
@@ -22,15 +23,58 @@ export default function CreateVisitScreen({
   const [visitType, setVisitType] = useState<'planned' | 'unplanned' | null>(null);
   const [comment, setComment] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePhotoAdd = () => {
-    const placeholders = [
-      'https://placehold.co/600x400/0EA5E9/fff?text=Фото+оборудования',
-      'https://placehold.co/600x400/8B5CF6/fff?text=Система+безопасности',
-      'https://placehold.co/600x400/F97316/fff?text=Датчики'
-    ];
-    const randomPhoto = placeholders[Math.floor(Math.random() * placeholders.length)];
-    setPhotos([...photos, randomPhoto]);
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        
+        await new Promise<void>((resolve, reject) => {
+          reader.onload = async (e) => {
+            try {
+              const base64 = e.target?.result as string;
+              const type = file.type.includes('png') ? 'png' : 'jpg';
+              
+              const response = await api.uploadPhoto(base64, type);
+              
+              if (response.error) {
+                alert(`Ошибка загрузки: ${response.error}`);
+                reject(new Error(response.error));
+              } else if (response.data) {
+                setPhotos(prev => [...prev, response.data!.photo_url]);
+                resolve();
+              }
+            } catch (error) {
+              reject(error);
+            }
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+    } finally {
+      setIsUploading(false);
+      if (event.target) event.target.value = '';
+    }
+  };
+
+  const handleCameraClick = () => {
+    cameraInputRef.current?.click();
+  };
+
+  const handleGalleryClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handlePhotoRemove = (index: number) => {
@@ -175,14 +219,56 @@ export default function CreateVisitScreen({
                       <h2 className="text-xl font-semibold text-white">Фотофиксация</h2>
                       <p className="text-sm text-slate-400 mt-1">Обязательное требование МЧС</p>
                     </div>
-                    <Button 
-                      onClick={handlePhotoAdd}
-                      className="bg-secondary hover:bg-secondary/90"
-                    >
-                      <Icon name="Camera" size={18} className="mr-2" />
-                      Добавить фото
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={handleCameraClick}
+                        disabled={isUploading}
+                        className="bg-secondary hover:bg-secondary/90"
+                      >
+                        <Icon name="Camera" size={18} className="mr-2" />
+                        Камера
+                      </Button>
+                      <Button 
+                        onClick={handleGalleryClick}
+                        disabled={isUploading}
+                        variant="outline"
+                        className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                      >
+                        <Icon name="Image" size={18} className="mr-2" />
+                        Галерея
+                      </Button>
+                    </div>
                   </div>
+
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+
+                  {isUploading && (
+                    <div className="mb-4 p-4 rounded-lg bg-primary/10 border border-primary/30">
+                      <div className="flex items-center gap-3">
+                        <div className="animate-spin">
+                          <Icon name="Loader2" size={20} className="text-primary" />
+                        </div>
+                        <span className="text-primary font-medium">Загрузка фото...</span>
+                      </div>
+                    </div>
+                  )}
 
                   {photos.length === 0 ? (
                     <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center">

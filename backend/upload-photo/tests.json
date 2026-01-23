@@ -1,0 +1,18 @@
+{
+  "tests": [
+    {
+      "name": "Upload test photo",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "photo": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "type": "png"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "photo_url": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

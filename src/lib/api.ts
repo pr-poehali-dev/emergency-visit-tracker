@@ -1,4 +1,5 @@
 const API_URL = 'https://functions.poehali.dev/89a43a62-4e01-4dc6-8bd6-e1352b43f588';
+const UPLOAD_URL = 'https://functions.poehali.dev/9ab1b65a-a9d8-4b19-860d-fceeb4ccaca0';
 
 export interface ApiResponse<T = unknown> {
   data?: T;
@@ -103,5 +104,31 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+
+  async uploadPhoto(photoBase64: string, type: 'jpg' | 'png' = 'jpg'): Promise<ApiResponse<{ photo_url: string; message: string }>> {
+    try {
+      const response = await fetch(UPLOAD_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          photo: photoBase64,
+          type,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { error: data.error || 'Upload failed' };
+      }
+
+      return { data };
+    } catch (error) {
+      console.error('Upload Error:', error);
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
   },
 };
