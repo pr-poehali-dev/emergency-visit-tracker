@@ -16,13 +16,18 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (login === 'director' && password === 'director') {
-      onLogin('director', 'Директор');
-    } else if (login === 'tech' && password === 'tech') {
-      onLogin('technician', 'Техник');
-    } else {
-      alert('Неверный логин или пароль');
+    const users = localStorage.getItem('mchs_users');
+    if (users) {
+      const usersList = JSON.parse(users);
+      const user = usersList.find((u: any) => u.username === login && u.password === password);
+      
+      if (user) {
+        onLogin(user.role, user.fullName);
+        return;
+      }
     }
+    
+    alert('Неверный логин или пароль');
   };
 
   return (

@@ -25,11 +25,51 @@ export interface SiteObject {
   visits: Visit[];
 }
 
+export interface User {
+  id: string;
+  username: string;
+  password: string;
+  fullName: string;
+  role: 'technician' | 'director';
+  createdAt: string;
+}
+
 function Index() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [userName, setUserName] = useState<string>('');
   const [selectedObject, setSelectedObject] = useState<SiteObject | null>(null);
+
+  const getInitialUsers = (): User[] => {
+    const saved = localStorage.getItem('mchs_users');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return [
+      {
+        id: '1',
+        username: 'director',
+        password: 'director',
+        fullName: 'Директор',
+        role: 'director',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '2',
+        username: 'tech',
+        password: 'tech',
+        fullName: 'Техник',
+        role: 'technician',
+        createdAt: new Date().toISOString()
+      }
+    ];
+  };
+
+  const [users, setUsers] = useState<User[]>(getInitialUsers);
+
+  useEffect(() => {
+    localStorage.setItem('mchs_users', JSON.stringify(users));
+  }, [users]);
 
   const getInitialObjects = (): SiteObject[] => {
     const saved = localStorage.getItem('mchs_objects');
@@ -185,7 +225,9 @@ function Index() {
       {currentScreen === 'director' && (
         <DirectorPanel 
           objects={objects}
+          users={users}
           onBack={handleBackToObjects}
+          onUpdateUsers={setUsers}
         />
       )}
     </div>
