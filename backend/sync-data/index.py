@@ -3,6 +3,7 @@ import os
 from typing import Any, Dict, List, Tuple, Optional
 import boto3
 import base64
+import copy
 
 def upload_media(s3, bucket: str, data_uri: str, file_id: str, prefix: str) -> Tuple[str, Optional[str]]:
     """Загружает медиафайл (фото/видео) в S3 и возвращает ключ и CDN URL"""
@@ -125,10 +126,17 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                                     visit['photos'][i] = cdn_url
                                     uploaded_files.append(file_key)
                 
-                updated_data = {
-                    'objects': merged_objects,
-                    'users': server_data.get('users', []) if 'server_data' in locals() else body.get('users', [])
-                }
+                local_users = body.get('users', [])
+                if local_users:
+                    updated_data = {
+                        'objects': merged_objects,
+                        'users': local_users
+                    }
+                else:
+                    updated_data = {
+                        'objects': merged_objects,
+                        'users': server_data.get('users', [])
+                    }
                 
                 s3.put_object(
                     Bucket=bucket,
@@ -197,7 +205,7 @@ def merge_objects(server_objects: List[Dict], local_objects: List[Dict]) -> List
     objects_dict = {}
     
     for obj in server_objects:
-        objects_dict[obj['id']] = obj
+        objects_dict[obj['id']] = copy.deepcopy(obj)
     
     for local_obj in local_objects:
         obj_id = local_obj['id']
