@@ -37,23 +37,22 @@ export default function CreateVisitScreen({
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        const maxSize = file.type.startsWith('video/') ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+        
+        if (file.size > maxSize) {
+          const limitMB = file.type.startsWith('video/') ? 100 : 10;
+          alert(`Файл слишком большой. Максимум ${limitMB}МБ для ${file.type.startsWith('video/') ? 'видео' : 'фото'}`);
+          continue;
+        }
+        
         const reader = new FileReader();
         
         await new Promise<void>((resolve, reject) => {
           reader.onload = async (e) => {
             try {
               const base64 = e.target?.result as string;
-              const type = file.type.includes('png') ? 'png' : 'jpg';
-              
-              const response = await api.uploadPhoto(base64, type);
-              
-              if (response.error) {
-                alert(`Ошибка загрузки: ${response.error}`);
-                reject(new Error(response.error));
-              } else if (response.data) {
-                setPhotos(prev => [...prev, response.data!.photo_url]);
-                resolve();
-              }
+              setPhotos(prev => [...prev, base64]);
+              resolve();
             } catch (error) {
               reject(error);
             }
@@ -94,7 +93,7 @@ export default function CreateVisitScreen({
     }
 
     if (photos.length === 0) {
-      alert('Добавьте хотя бы одно фото');
+      alert('Добавьте хотя бы одно фото или видео');
       return;
     }
 
@@ -259,8 +258,8 @@ export default function CreateVisitScreen({
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h2 className="text-xl font-semibold text-white">Фотофиксация</h2>
-                      <p className="text-sm text-slate-400 mt-1">Добавьте фото с объекта</p>
+                      <h2 className="text-xl font-semibold text-white">Фото и видео</h2>
+                      <p className="text-sm text-slate-400 mt-1">Добавьте фото/видео с объекта (видео до 100МБ)</p>
                     </div>
                     <div className="flex gap-2">
                       <Button 
@@ -286,7 +285,7 @@ export default function CreateVisitScreen({
                   <input
                     ref={cameraInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*"
                     capture="environment"
                     multiple
                     className="hidden"
@@ -296,7 +295,7 @@ export default function CreateVisitScreen({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*"
                     multiple
                     className="hidden"
                     onChange={handleFileSelect}
@@ -325,11 +324,19 @@ export default function CreateVisitScreen({
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {photos.map((photo, index) => (
                         <div key={index} className="relative aspect-video rounded-lg overflow-hidden group">
-                          <img 
-                            src={photo} 
-                            alt={`Фото ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
+                          {photo.startsWith('data:video') ? (
+                            <video 
+                              src={photo} 
+                              className="w-full h-full object-cover"
+                              controls
+                            />
+                          ) : (
+                            <img 
+                              src={photo} 
+                              alt={`Фото ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
                           <button
                             onClick={() => handlePhotoRemove(index)}
                             className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"

@@ -242,12 +242,29 @@ export default function ObjectHistoryScreen({
                             key={photoIndex}
                             className="relative aspect-video rounded-lg overflow-hidden group"
                           >
-                            <img 
-                              src={photo} 
-                              alt={`Фото ${photoIndex + 1}`}
-                              className="w-full h-full object-cover transition-transform group-hover:scale-110 cursor-pointer"
-                              onClick={() => setSelectedPhoto(photo)}
-                            />
+                            {photo.startsWith('data:video') || photo.includes('.mp4') || photo.includes('.webm') ? (
+                              <video 
+                                src={photo} 
+                                className="w-full h-full object-cover cursor-pointer"
+                                controls
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            ) : (
+                              <>
+                                <img 
+                                  src={photo} 
+                                  alt={`Фото ${photoIndex + 1}`}
+                                  className="w-full h-full object-cover transition-transform group-hover:scale-110 cursor-pointer"
+                                  onClick={() => setSelectedPhoto(photo)}
+                                />
+                                <div 
+                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                                  onClick={() => setSelectedPhoto(photo)}
+                                >
+                                  <Icon name="ZoomIn" size={24} className="text-white" />
+                                </div>
+                              </>
+                            )}
                             {editingVisit === visit.id && userRole === 'director' && (
                               <button
                                 onClick={(e) => {
@@ -263,12 +280,6 @@ export default function ObjectHistoryScreen({
                                 <Icon name="Trash2" size={16} className="text-white" />
                               </button>
                             )}
-                            <div 
-                              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
-                              onClick={() => setSelectedPhoto(photo)}
-                            >
-                              <Icon name="ZoomIn" size={24} className="text-white" />
-                            </div>
                           </div>
                         ))}
                       </div>

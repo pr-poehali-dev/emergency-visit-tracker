@@ -1,8 +1,34 @@
 import json
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple, Optional
 import boto3
 import base64
+
+def upload_media(s3, bucket: str, data_uri: str, file_id: str, prefix: str) -> Tuple[str, Optional[str]]:
+    """Загружает медиафайл (фото/видео) в S3 и возвращает ключ и CDN URL"""
+    try:
+        mime_type = data_uri.split(';')[0].split(':')[1]
+        base64_data = data_uri.split(',')[1]
+        file_bytes = base64.b64decode(base64_data)
+        
+        if mime_type.startswith('video/'):
+            ext = mime_type.split('/')[1]
+            file_key = f"{prefix}{file_id}.{ext}"
+        else:
+            file_key = f"{prefix}{file_id}.jpg"
+        
+        s3.put_object(
+            Bucket=bucket,
+            Key=file_key,
+            Body=file_bytes,
+            ContentType=mime_type
+        )
+        
+        cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
+        return file_key, cdn_url
+    except Exception as e:
+        print(f"Error uploading media: {e}")
+        return "", None
 
 def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
     """API для синхронизации всех данных приложения с сервером profire23.store"""
@@ -31,6 +57,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
     bucket = 'files'
     data_key = 'profire_data/database.json'
     photos_prefix = 'profire_data/photos/'
+    videos_prefix = 'profire_data/videos/'
     
     if method == 'GET':
         try:
@@ -81,39 +108,22 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 
                 merged_objects = merge_objects(server_objects, local_objects)
                 
-                uploaded_photos = []
+                uploaded_files = []
                 for obj in merged_objects:
-                    if obj.get('objectPhoto') and obj['objectPhoto'].startswith('data:image'):
-                        photo_key = f"{photos_prefix}obj_{obj['id']}.jpg"
-                        photo_base64 = obj['objectPhoto'].split(',')[1]
-                        photo_bytes = base64.b64decode(photo_base64)
-                        
-                        s3.put_object(
-                            Bucket=bucket,
-                            Key=photo_key,
-                            Body=photo_bytes,
-                            ContentType='image/jpeg'
-                        )
-                        
-                        obj['objectPhoto'] = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{photo_key}"
-                        uploaded_photos.append(photo_key)
+                    if obj.get('objectPhoto') and obj['objectPhoto'].startswith('data:'):
+                        file_key, cdn_url = upload_media(s3, bucket, obj['objectPhoto'], f"obj_{obj['id']}", photos_prefix)
+                        if cdn_url:
+                            obj['objectPhoto'] = cdn_url
+                            uploaded_files.append(file_key)
                     
                     for visit in obj.get('visits', []):
-                        for i, photo in enumerate(visit.get('photos', [])):
-                            if photo.startswith('data:image'):
-                                photo_key = f"{photos_prefix}visit_{visit['id']}_{i}.jpg"
-                                photo_base64 = photo.split(',')[1]
-                                photo_bytes = base64.b64decode(photo_base64)
-                                
-                                s3.put_object(
-                                    Bucket=bucket,
-                                    Key=photo_key,
-                                    Body=photo_bytes,
-                                    ContentType='image/jpeg'
-                                )
-                                
-                                visit['photos'][i] = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{photo_key}"
-                                uploaded_photos.append(photo_key)
+                        for i, media in enumerate(visit.get('photos', [])):
+                            if media.startswith('data:'):
+                                prefix = videos_prefix if media.startswith('data:video') else photos_prefix
+                                file_key, cdn_url = upload_media(s3, bucket, media, f"visit_{visit['id']}_{i}", prefix)
+                                if cdn_url:
+                                    visit['photos'][i] = cdn_url
+                                    uploaded_files.append(file_key)
                 
                 updated_data = {
                     'objects': merged_objects,
@@ -137,7 +147,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                         'status': 'success',
                         'message': f'Синхронизировано {len(merged_objects)} объектов',
                         'data': updated_data,
-                        'uploaded_photos': len(uploaded_photos)
+                        'uploaded_photos': len(uploaded_files)
                     }),
                     'isBase64Encoded': False
                 }
