@@ -38,9 +38,27 @@ export interface User {
 }
 
 function Index() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('login');
-  const [userRole, setUserRole] = useState<UserRole>(null);
-  const [userName, setUserName] = useState<string>('');
+  const getInitialSession = () => {
+    const saved = localStorage.getItem('mchs_session');
+    if (saved) {
+      const session = JSON.parse(saved);
+      return {
+        screen: 'objects' as Screen,
+        role: session.role as UserRole,
+        name: session.name
+      };
+    }
+    return {
+      screen: 'login' as Screen,
+      role: null as UserRole,
+      name: ''
+    };
+  };
+
+  const initialSession = getInitialSession();
+  const [currentScreen, setCurrentScreen] = useState<Screen>(initialSession.screen);
+  const [userRole, setUserRole] = useState<UserRole>(initialSession.role);
+  const [userName, setUserName] = useState<string>(initialSession.name);
   const [selectedObject, setSelectedObject] = useState<SiteObject | null>(null);
 
   const getInitialUsers = (): User[] => {
@@ -146,6 +164,7 @@ function Index() {
     setUserRole(role);
     setUserName(name);
     setCurrentScreen('objects');
+    localStorage.setItem('mchs_session', JSON.stringify({ role, name }));
   };
 
   const handleSelectObject = (obj: SiteObject) => {

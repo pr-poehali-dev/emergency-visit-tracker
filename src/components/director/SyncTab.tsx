@@ -187,12 +187,21 @@ export default function SyncTab({ objects }: SyncTabProps) {
           <div className="mt-6 flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
             <Icon name="Info" size={20} className="text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="text-amber-200 font-medium mb-1">Важная информация</p>
-              <ul className="text-amber-300/80 space-y-1 list-disc list-inside">
-                <li>Фотографии хранятся на сервере в папке <code className="bg-slate-900/50 px-1 rounded">/mchs_photos/</code></li>
-                <li>При загрузке на Beget используйте FTP для доступа к файлам</li>
-                <li>Офлайн-данные всегда остаются на устройстве пользователя</li>
-                <li>Синхронизация работает только при наличии интернета</li>
+              <p className="text-amber-200 font-medium mb-1">Где хранятся фотографии</p>
+              <ul className="text-amber-300/80 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="font-medium">Локально:</span>
+                  <span>В памяти браузера (localStorage) каждого устройства</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium">На сервере:</span>
+                  <span>S3 хранилище в папке <code className="bg-slate-900/50 px-1 rounded">mchs_photos/</code></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium">Доступ:</span>
+                  <span className="break-all">https://cdn.poehali.dev/projects/[ключ]/bucket/mchs_photos/</span>
+                </li>
+                <li className="text-amber-200 font-medium pt-1">💡 После публикации на Beget фото будут доступны по вашему домену</li>
               </ul>
             </div>
           </div>

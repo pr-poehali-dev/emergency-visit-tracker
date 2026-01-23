@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,8 @@ export default function ObjectHistoryScreen({
   onBack, 
   onCreateVisit 
 }: ObjectHistoryScreenProps) {
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('ru-RU', {
@@ -129,6 +132,7 @@ export default function ObjectHistoryScreen({
                           <div 
                             key={photoIndex}
                             className="relative aspect-video rounded-lg overflow-hidden group cursor-pointer"
+                            onClick={() => setSelectedPhoto(photo)}
                           >
                             <img 
                               src={photo} 
@@ -149,6 +153,26 @@ export default function ObjectHistoryScreen({
           </div>
         )}
       </div>
+
+      {selectedPhoto && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <button
+            onClick={() => setSelectedPhoto(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors"
+          >
+            <Icon name="X" size={24} className="text-white" />
+          </button>
+          <img 
+            src={selectedPhoto} 
+            alt="Фото в полном размере" 
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
