@@ -36,9 +36,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         <div className="text-center mb-8">
           <div className="mb-6 p-6 rounded-2xl bg-slate-800/30 backdrop-blur-sm border border-slate-700/50">
             <img 
-              src="https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/403b7a7c-d1f3-4d52-b704-84b5f7faacf9.jpg" 
+              src="https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/818cb62f-8db7-4e06-86f9-e2e79672b269.png" 
               alt="PROFIRE - ЮГ" 
-              className="mx-auto w-80 h-auto mix-blend-lighten"
+              className="mx-auto w-80 h-auto"
             />
           </div>
           <p className="text-slate-300">Система учёта посещений объектов</p>
@@ -98,20 +98,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 <Icon name="LogIn" size={18} className="mr-2" />
                 Войти
               </Button>
-
-              <div className="pt-4 border-t border-slate-700">
-                <p className="text-xs text-slate-400 text-center mb-3">Тестовые аккаунты:</p>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between p-2 rounded bg-slate-900/30 border border-slate-700">
-                    <span className="text-slate-300">Техник:</span>
-                    <span className="text-slate-400 font-mono">tech / tech</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded bg-slate-900/30 border border-slate-700">
-                    <span className="text-slate-300">Директор:</span>
-                    <span className="text-slate-400 font-mono">director / director</span>
-                  </div>
-                </div>
-              </div>
             </form>
           </CardContent>
         </Card>
