@@ -30,37 +30,46 @@ export default function ObjectsListScreen({
     setSyncStatus('Синхронизация с сервером...');
     
     try {
-      const users = localStorage.getItem('mchs_users');
-      
-      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          action: 'sync',
-          objects: objects,
-          users: users ? JSON.parse(users) : []
-        })
-      });
+      for (let i = 0; i < objects.length; i++) {
+        const obj = objects[i];
+        const progress = Math.round(((i + 1) / objects.length) * 100);
+        setSyncStatus(`Отправка ${i + 1} из ${objects.length} (${progress}%)`);
+        
+        const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            action: 'sync',
+            objects: [obj],
+            users: []
+          })
+        });
 
-      const result = await response.json();
-      
-      if (result.status === 'success') {
-        setSyncStatus(`✓ Синхронизировано ${result.data.objects.length} объектов`);
+        if (!response.ok) {
+          throw new Error(`Ошибка на объекте "${obj.name}"`);
+        }
+
+        const result = await response.json();
         
-        localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects));
-        localStorage.setItem('mchs_last_sync', new Date().toISOString());
+        if (result.status !== 'success') {
+          throw new Error(`Объект "${obj.name}": ${result.error || 'Ошибка'}`);
+        }
         
-        window.location.reload();
-      } else {
-        setSyncStatus('✗ Ошибка синхронизации');
-        setTimeout(() => setSyncStatus(''), 3000);
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
-    } catch (error) {
-      setSyncStatus('✗ Ошибка подключения к серверу');
+      
+      setSyncStatus(`✓ Синхронизировано ${objects.length} объектов`);
+      localStorage.setItem('mchs_last_sync', new Date().toISOString());
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error: any) {
+      setSyncStatus(`✗ ${error.message || 'Ошибка синхронизации'}`);
       console.error('Sync error:', error);
-      setTimeout(() => setSyncStatus(''), 3000);
+      setTimeout(() => setSyncStatus(''), 5000);
     } finally {
       setIsSyncing(false);
     }
