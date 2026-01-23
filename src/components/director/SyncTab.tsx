@@ -37,41 +37,70 @@ export default function SyncTab({ objects }: SyncTabProps) {
     return photos;
   };
 
+  const downloadBackup = () => {
+    const data = {
+      objects: objects,
+      users: JSON.parse(localStorage.getItem('mchs_users') || '[]'),
+      exportDate: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `profire_backup_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleSync = async () => {
     setIsSyncing(true);
-    setSyncStatus('Синхронизация с сервером...');
+    setSyncStatus('Подготовка данных...');
     
     try {
       const users = localStorage.getItem('mchs_users');
+      const payload = {
+        action: 'sync',
+        objects: objects,
+        users: users ? JSON.parse(users) : []
+      };
+      
+      const payloadSize = new Blob([JSON.stringify(payload)]).size;
+      const sizeMB = (payloadSize / (1024 * 1024)).toFixed(2);
+      
+      setSyncStatus(`Отправка данных (${sizeMB} МБ)...`);
       
       const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          action: 'sync',
-          objects: objects,
-          users: users ? JSON.parse(users) : []
-        })
+        body: JSON.stringify(payload)
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
       const result = await response.json();
       
       if (result.status === 'success') {
-        setSyncStatus(`✓ Синхронизировано ${result.data.objects.length} объектов`);
+        setSyncStatus(`✓ Синхронизировано ${result.data.objects.length} объектов, загружено ${result.uploaded_photos} фото`);
         setLastSync(new Date().toLocaleString('ru-RU'));
         localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects));
         localStorage.setItem('mchs_last_sync', new Date().toISOString());
         
         setTimeout(() => {
           window.location.reload();
-        }, 1500);
+        }, 2000);
       } else {
-        setSyncStatus('✗ Ошибка синхронизации');
+        setSyncStatus(`✗ Ошибка: ${result.error || 'Неизвестная ошибка'}`);
       }
-    } catch (error) {
-      setSyncStatus('✗ Ошибка подключения к серверу');
+    } catch (error: any) {
+      const errorMsg = error.message || String(error);
+      setSyncStatus(`✗ Ошибка: ${errorMsg}`);
       console.error('Sync error:', error);
     } finally {
       setIsSyncing(false);
@@ -142,24 +171,36 @@ export default function SyncTab({ objects }: SyncTabProps) {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-3 mb-4">
-            <Button 
-              onClick={handleSync}
-              disabled={isSyncing || totalPhotos === 0}
-              className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 h-12"
-            >
-              <Icon name="CloudUpload" size={18} className="mr-2" />
-              Загрузить на сервер
-            </Button>
+          <div className="space-y-3 mb-4">
+            <div className="grid md:grid-cols-2 gap-3">
+              <Button 
+                onClick={handleSync}
+                disabled={isSyncing || objects.length === 0}
+                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 h-12"
+              >
+                <Icon name="CloudUpload" size={18} className="mr-2" />
+                Загрузить на сервер
+              </Button>
 
+              <Button 
+                onClick={handleDownload}
+                disabled={isSyncing}
+                variant="outline"
+                className="border-slate-600 text-slate-300 hover:bg-slate-800 h-12"
+              >
+                <Icon name="CloudDownload" size={18} className="mr-2" />
+                Скачать с сервера
+              </Button>
+            </div>
+            
             <Button 
-              onClick={handleDownload}
-              disabled={isSyncing}
+              onClick={downloadBackup}
+              disabled={objects.length === 0}
               variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-800 h-12"
+              className="w-full border-green-600 text-green-300 hover:bg-green-900/20 h-12"
             >
-              <Icon name="CloudDownload" size={18} className="mr-2" />
-              Скачать с сервера
+              <Icon name="Download" size={18} className="mr-2" />
+              Скачать резервную копию (для безопасности)
             </Button>
           </div>
 
