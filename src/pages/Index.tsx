@@ -10,6 +10,14 @@ import DirectorPanel from '@/components/DirectorPanel';
 type Screen = 'login' | 'objects' | 'history' | 'create' | 'director' | 'createTask' | 'installation';
 type UserRole = 'technician' | 'director' | 'supervisor' | null;
 
+export interface SmsNotification {
+  phone: string;
+  status: 'sent' | 'failed' | 'queued';
+  message_id?: number;
+  cost?: number;
+  error?: string;
+}
+
 export interface Visit {
   id: string;
   date: string;
@@ -22,6 +30,7 @@ export interface Visit {
   taskCompleted?: boolean;
   taskCompletedBy?: string;
   taskCompletedAt?: string;
+  smsNotifications?: SmsNotification[];
 }
 
 export interface SiteObject {

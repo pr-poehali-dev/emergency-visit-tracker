@@ -9,6 +9,7 @@ import ObjectsTab from './director/ObjectsTab';
 import UsersTab from './director/UsersTab';
 import ObjectsManagementTab from './director/ObjectsManagementTab';
 import SyncTab from './director/SyncTab';
+import SmsStatsTab from './director/SmsStatsTab';
 
 interface DirectorPanelProps {
   objects: SiteObject[];
@@ -184,6 +185,10 @@ export default function DirectorPanel({ objects, users, onBack, onUpdateUsers, o
               <Icon name="CloudUpload" size={16} className="mr-2" />
               Синхронизация
             </TabsTrigger>
+            <TabsTrigger value="sms" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+              <Icon name="MessageSquare" size={16} className="mr-2" />
+              SMS статистика
+            </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-white">
               <Icon name="Users" size={16} className="mr-2" />
               Пользователи
@@ -204,6 +209,10 @@ export default function DirectorPanel({ objects, users, onBack, onUpdateUsers, o
 
           <TabsContent value="sync">
             <SyncTab objects={objects} />
+          </TabsContent>
+
+          <TabsContent value="sms">
+            <SmsStatsTab objects={objects} />
           </TabsContent>
 
           <TabsContent value="users">

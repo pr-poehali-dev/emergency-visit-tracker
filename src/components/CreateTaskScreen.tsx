@@ -40,7 +40,8 @@ export default function CreateTaskScreen({
       createdBy: userName,
       createdAt: new Date().toISOString(),
       taskDescription: taskDescription,
-      taskCompleted: false
+      taskCompleted: false,
+      smsNotifications: [] as any[]
     };
 
     const updatedObject = {
@@ -57,7 +58,7 @@ export default function CreateTaskScreen({
           .map((u: any) => u.phone);
         
         if (technicianPhones.length > 0) {
-          await fetch('https://functions.poehali.dev/337019d5-dd82-4aaa-8118-0093926f6759', {
+          const response = await fetch('https://functions.poehali.dev/337019d5-dd82-4aaa-8118-0093926f6759', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -66,6 +67,11 @@ export default function CreateTaskScreen({
               task_description: taskDescription
             })
           });
+          
+          const result = await response.json();
+          if (result.status === 'success' && result.notifications) {
+            newTask.smsNotifications = result.notifications;
+          }
         }
       } catch (error) {
         console.error('SMS notification error:', error);
