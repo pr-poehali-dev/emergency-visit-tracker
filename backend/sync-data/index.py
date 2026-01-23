@@ -64,6 +64,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
         try:
             response = s3.get_object(Bucket=bucket, Key=data_key)
             data = json.loads(response['Body'].read().decode('utf-8'))
+            print(f"GET: Returning {len(data.get('objects', []))} objects, {len(data.get('users', []))} users")
             
             return {
                 'statusCode': 200,
@@ -101,6 +102,8 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 local_users = body.get('users', [])
                 is_first_batch = len(local_users) > 0
                 
+                print(f"SYNC: Received {len(local_objects)} objects, {len(local_users)} users, is_first_batch={is_first_batch}")
+                
                 try:
                     response = s3.get_object(Bucket=bucket, Key=data_key)
                     server_data = json.loads(response['Body'].read().decode('utf-8'))
@@ -111,8 +114,10 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 
                 if is_first_batch:
                     merged_objects = copy.deepcopy(local_objects)
+                    print(f"First batch: Using {len(merged_objects)} local objects")
                 else:
                     merged_objects = merge_objects(server_objects, local_objects)
+                    print(f"Merge result: {len(merged_objects)} objects")
                 
                 uploaded_files = []
                 for obj in merged_objects:
