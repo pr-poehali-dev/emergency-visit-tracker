@@ -77,10 +77,8 @@ export default function SyncTab({ objects }: SyncTabProps) {
     setSyncStatus('Подготовка данных...');
     
     try {
-      const users = localStorage.getItem('mchs_users');
       const totalObjects = objects.length;
       let uploadedPhotos = 0;
-      const syncedObjects: any[] = [];
       
       for (let i = 0; i < totalObjects; i++) {
         const obj = objects[i];
@@ -89,7 +87,7 @@ export default function SyncTab({ objects }: SyncTabProps) {
         const payloadStr = JSON.stringify({
           action: 'sync',
           objects: [obj],
-          users: i === 0 ? (users ? JSON.parse(users) : []) : []
+          users: []
         });
         const sizeMB = (payloadStr.length / (1024 * 1024)).toFixed(2);
         
@@ -115,14 +113,12 @@ export default function SyncTab({ objects }: SyncTabProps) {
         }
         
         uploadedPhotos += result.uploaded_photos || 0;
-        syncedObjects.push(result.data.objects[0]);
         
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
       setSyncStatus(`✓ Синхронизировано ${totalObjects} объектов, загружено ${uploadedPhotos} фото/видео`);
       setLastSync(new Date().toLocaleString('ru-RU'));
-      localStorage.setItem('mchs_objects', JSON.stringify(syncedObjects));
       localStorage.setItem('mchs_last_sync', new Date().toISOString());
       
       setTimeout(() => {
