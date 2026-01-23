@@ -121,7 +121,21 @@ export default function CreateVisitScreen({
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="min-h-screen p-4 md:p-6 relative">
+      {object.objectPhoto && (
+        <div 
+          className="fixed inset-0 z-0"
+          style={{
+            backgroundImage: `url(${object.objectPhoto})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed'
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-purple-900/90 to-slate-900/95 backdrop-blur-sm" />
+        </div>
+      )}
+      <div className="relative z-10">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
           <Button 
@@ -393,6 +407,7 @@ export default function CreateVisitScreen({
             </>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
