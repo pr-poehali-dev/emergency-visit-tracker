@@ -39,37 +39,34 @@ export default function SyncTab({ objects }: SyncTabProps) {
 
   const handleSync = async () => {
     setIsSyncing(true);
-    setSyncStatus('Подготовка данных...');
+    setSyncStatus('Синхронизация с сервером...');
     
     try {
-      const photos = getAllPhotos();
+      const users = localStorage.getItem('mchs_users');
       
-      if (photos.length === 0) {
-        setSyncStatus('Нет фотографий для синхронизации');
-        setIsSyncing(false);
-        return;
-      }
-
-      setSyncStatus(`Загрузка ${photos.length} фотографий на сервер...`);
-      
-      const response = await fetch('https://functions.poehali.dev/1dfc483e-0291-4d5e-8cf8-b29716b7da40', {
+      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          action: 'upload',
-          photos: photos
+          action: 'sync',
+          objects: objects,
+          users: users ? JSON.parse(users) : []
         })
       });
 
       const result = await response.json();
       
       if (result.status === 'success') {
-        setSyncStatus(`✓ Успешно загружено ${photos.length} фотографий`);
+        setSyncStatus(`✓ Синхронизировано ${result.data.objects.length} объектов`);
         setLastSync(new Date().toLocaleString('ru-RU'));
-        
+        localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects));
         localStorage.setItem('mchs_last_sync', new Date().toISOString());
+        
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       } else {
         setSyncStatus('✗ Ошибка синхронизации');
       }
@@ -86,20 +83,22 @@ export default function SyncTab({ objects }: SyncTabProps) {
     setSyncStatus('Загрузка данных с сервера...');
     
     try {
-      const response = await fetch('https://functions.poehali.dev/1dfc483e-0291-4d5e-8cf8-b29716b7da40', {
-        method: 'POST',
+      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          action: 'download'
-        })
+        }
       });
 
       const result = await response.json();
       
       if (result.status === 'success') {
-        setSyncStatus(`✓ Загружено ${result.photos.length} фотографий с сервера`);
+        setSyncStatus(`✓ Загружено ${result.data.objects.length} объектов с сервера`);
+        localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects));
+        
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       } else {
         setSyncStatus('✗ Ошибка загрузки');
       }
@@ -184,24 +183,16 @@ export default function SyncTab({ objects }: SyncTabProps) {
             </div>
           )}
 
-          <div className="mt-6 flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-            <Icon name="Info" size={20} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="mt-6 flex items-start gap-3 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+            <Icon name="Info" size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="text-amber-200 font-medium mb-1">Где хранятся фотографии</p>
-              <ul className="text-amber-300/80 space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="font-medium">Локально:</span>
-                  <span>В памяти браузера (localStorage) каждого устройства</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="font-medium">На сервере:</span>
-                  <span>S3 хранилище в папке <code className="bg-slate-900/50 px-1 rounded">mchs_photos/</code></span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="font-medium">Доступ:</span>
-                  <span className="break-all">https://cdn.poehali.dev/projects/[ключ]/bucket/mchs_photos/</span>
-                </li>
-                <li className="text-amber-200 font-medium pt-1">💡 После публикации на Beget фото будут доступны по вашему домену</li>
+              <p className="text-blue-200 font-medium mb-2">Как работает синхронизация</p>
+              <ul className="text-blue-300/80 space-y-2 list-disc list-inside">
+                <li>Все данные хранятся на сервере <code className="bg-slate-900/50 px-1 rounded">profire23.store</code></li>
+                <li>Папка с файлами: <code className="bg-slate-900/50 px-1 rounded">profire_data/</code></li>
+                <li>База данных: <code className="bg-slate-900/50 px-1 rounded">database.json</code></li>
+                <li>Фотографии: <code className="bg-slate-900/50 px-1 rounded">photos/*.jpg</code></li>
+                <li className="font-medium pt-1">При синхронизации объединяются визиты от разных техников по времени создания</li>
               </ul>
             </div>
           </div>

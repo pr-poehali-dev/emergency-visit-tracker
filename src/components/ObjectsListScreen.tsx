@@ -25,69 +25,40 @@ export default function ObjectsListScreen({
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string>('');
 
-  const getAllPhotos = () => {
-    const photos: { id: string; data: string }[] = [];
-    
-    objects.forEach(obj => {
-      if (obj.objectPhoto) {
-        photos.push({
-          id: `obj_${obj.id}`,
-          data: obj.objectPhoto
-        });
-      }
-      
-      obj.visits.forEach(visit => {
-        visit.photos.forEach((photo, index) => {
-          photos.push({
-            id: `visit_${visit.id}_${index}`,
-            data: photo
-          });
-        });
-      });
-    });
-    
-    return photos;
-  };
-
   const handleSync = async () => {
     setIsSyncing(true);
-    setSyncStatus('Подготовка данных...');
+    setSyncStatus('Синхронизация с сервером...');
     
     try {
-      const photos = getAllPhotos();
+      const users = localStorage.getItem('mchs_users');
       
-      if (photos.length === 0) {
-        setSyncStatus('Нет фотографий для синхронизации');
-        setIsSyncing(false);
-        setTimeout(() => setSyncStatus(''), 2000);
-        return;
-      }
-
-      setSyncStatus(`Загрузка ${photos.length} фото на сервер...`);
-      
-      const response = await fetch('https://functions.poehali.dev/1dfc483e-0291-4d5e-8cf8-b29716b7da40', {
+      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          action: 'upload',
-          photos: photos
+          action: 'sync',
+          objects: objects,
+          users: users ? JSON.parse(users) : []
         })
       });
 
       const result = await response.json();
       
       if (result.status === 'success') {
-        setSyncStatus(`✓ Загружено ${photos.length} фото`);
+        setSyncStatus(`✓ Синхронизировано ${result.data.objects.length} объектов`);
+        
+        localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects));
         localStorage.setItem('mchs_last_sync', new Date().toISOString());
-        setTimeout(() => setSyncStatus(''), 3000);
+        
+        window.location.reload();
       } else {
         setSyncStatus('✗ Ошибка синхронизации');
         setTimeout(() => setSyncStatus(''), 3000);
       }
     } catch (error) {
-      setSyncStatus('✗ Ошибка подключения');
+      setSyncStatus('✗ Ошибка подключения к серверу');
       console.error('Sync error:', error);
       setTimeout(() => setSyncStatus(''), 3000);
     } finally {
@@ -181,9 +152,19 @@ export default function ObjectsListScreen({
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
-                      <Icon name="Building2" size={24} className="text-white" />
-                    </div>
+                    {obj.objectPhoto ? (
+                      <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg flex-shrink-0">
+                        <img 
+                          src={obj.objectPhoto} 
+                          alt={obj.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
+                        <Icon name="Building2" size={24} className="text-white" />
+                      </div>
+                    )}
                     <div>
                       <h3 className="text-lg font-semibold text-white group-hover:text-primary transition-colors">
                         {obj.name}

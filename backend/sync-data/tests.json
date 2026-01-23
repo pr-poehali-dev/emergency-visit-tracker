@@ -1,0 +1,36 @@
+{
+  "tests": [
+    {
+      "name": "Get data from server",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "status": "success"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Sync data to server",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "sync",
+        "objects": [
+          {
+            "id": "test1",
+            "name": "Тестовый объект",
+            "address": "ул. Тестовая, 1",
+            "visits": []
+          }
+        ],
+        "users": []
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "status": "success"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
