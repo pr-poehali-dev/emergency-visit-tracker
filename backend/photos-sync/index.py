@@ -2,9 +2,10 @@ import json
 import base64
 import os
 from typing import Any, Dict
+import boto3
 
 def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
-    """API для синхронизации фотографий с сервером (загрузка/скачивание)"""
+    """API для синхронизации фотографий с сервером Beget через S3"""
     
     method = event.get('httpMethod', 'GET')
     
@@ -26,10 +27,14 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             body = json.loads(event.get('body', '{}'))
             action = body.get('action')
             
+            s3 = boto3.client('s3',
+                endpoint_url='https://bucket.poehali.dev',
+                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+            )
+            
             if action == 'upload':
                 photos_data = body.get('photos', [])
-                photo_dir = '/tmp/mchs_photos'
-                os.makedirs(photo_dir, exist_ok=True)
                 
                 uploaded_files = []
                 for photo in photos_data:
@@ -41,13 +46,19 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                     
                     photo_bytes = base64.b64decode(photo_base64)
                     
-                    file_path = os.path.join(photo_dir, f'{photo_id}.jpg')
-                    with open(file_path, 'wb') as f:
-                        f.write(photo_bytes)
+                    s3_key = f'mchs_photos/{photo_id}.jpg'
+                    s3.put_object(
+                        Bucket='files',
+                        Key=s3_key,
+                        Body=photo_bytes,
+                        ContentType='image/jpeg'
+                    )
+                    
+                    cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{s3_key}"
                     
                     uploaded_files.append({
                         'id': photo_id,
-                        'path': file_path,
+                        'url': cdn_url,
                         'size': len(photo_bytes)
                     })
                 
@@ -59,16 +70,59 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                     },
                     'body': json.dumps({
                         'status': 'success',
-                        'message': f'Загружено {len(uploaded_files)} фотографий',
+                        'message': f'Загружено {len(uploaded_files)} фотографий на сервер',
                         'uploaded': uploaded_files
                     }),
                     'isBase64Encoded': False
                 }
             
             elif action == 'download':
-                photo_dir = '/tmp/mchs_photos'
-                
-                if not os.path.exists(photo_dir):
+                try:
+                    response = s3.list_objects_v2(Bucket='files', Prefix='mchs_photos/')
+                    
+                    if 'Contents' not in response:
+                        return {
+                            'statusCode': 200,
+                            'headers': {
+                                'Content-Type': 'application/json',
+                                'Access-Control-Allow-Origin': '*'
+                            },
+                            'body': json.dumps({
+                                'status': 'success',
+                                'photos': []
+                            }),
+                            'isBase64Encoded': False
+                        }
+                    
+                    photos = []
+                    for obj in response['Contents']:
+                        if obj['Key'].endswith('.jpg'):
+                            file_obj = s3.get_object(Bucket='files', Key=obj['Key'])
+                            photo_bytes = file_obj['Body'].read()
+                            photo_base64 = base64.b64encode(photo_bytes).decode('utf-8')
+                            
+                            photo_id = obj['Key'].replace('mchs_photos/', '').replace('.jpg', '')
+                            cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{obj['Key']}"
+                            
+                            photos.append({
+                                'id': photo_id,
+                                'data': f'data:image/jpeg;base64,{photo_base64}',
+                                'url': cdn_url
+                            })
+                    
+                    return {
+                        'statusCode': 200,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        'body': json.dumps({
+                            'status': 'success',
+                            'photos': photos
+                        }),
+                        'isBase64Encoded': False
+                    }
+                except Exception as e:
                     return {
                         'statusCode': 200,
                         'headers': {
@@ -81,31 +135,6 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                         }),
                         'isBase64Encoded': False
                     }
-                
-                photos = []
-                for filename in os.listdir(photo_dir):
-                    if filename.endswith('.jpg'):
-                        file_path = os.path.join(photo_dir, filename)
-                        with open(file_path, 'rb') as f:
-                            photo_bytes = f.read()
-                            photo_base64 = base64.b64encode(photo_bytes).decode('utf-8')
-                            photos.append({
-                                'id': filename.replace('.jpg', ''),
-                                'data': f'data:image/jpeg;base64,{photo_base64}'
-                            })
-                
-                return {
-                    'statusCode': 200,
-                    'headers': {
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*'
-                    },
-                    'body': json.dumps({
-                        'status': 'success',
-                        'photos': photos
-                    }),
-                    'isBase64Encoded': False
-                }
             
             else:
                 return {

@@ -1,17 +1,91 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
 import type { SiteObject } from '@/pages/Index';
+import JSZip from 'jszip';
 
 interface ExportTabProps {
   objects: SiteObject[];
 }
 
 export default function ExportTab({ objects }: ExportTabProps) {
-  const totalVisits = objects.reduce((sum, obj) => sum + obj.visits.length, 0);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState<string>('');
 
-  const handleExport = () => {
-    alert('Экспорт в ЛКИР МЧС запущен. Требуется электронная подпись.');
+  const totalVisits = objects.reduce((sum, obj) => sum + obj.visits.length, 0);
+  const totalPhotos = objects.reduce((sum, obj) => 
+    sum + obj.visits.reduce((s, v) => s + v.photos.length, 0), 0
+  );
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setExportStatus('Подготовка данных...');
+
+    try {
+      const zip = new JSZip();
+
+      for (const obj of objects) {
+        const objectFolder = zip.folder(obj.name);
+        if (!objectFolder) continue;
+
+        for (const visit of obj.visits) {
+          const visitDate = new Date(visit.date).toLocaleDateString('ru-RU').replace(/\./g, '-');
+          const visitFolder = objectFolder.folder(visitDate);
+          if (!visitFolder) continue;
+
+          for (let i = 0; i < visit.photos.length; i++) {
+            const photo = visit.photos[i];
+            
+            if (photo.startsWith('data:image')) {
+              const base64Data = photo.split(',')[1];
+              visitFolder.file(`фото_${i + 1}.jpg`, base64Data, { base64: true });
+            } else if (photo.startsWith('http')) {
+              try {
+                const response = await fetch(photo);
+                const blob = await response.blob();
+                visitFolder.file(`фото_${i + 1}.jpg`, blob);
+              } catch (err) {
+                console.error('Ошибка загрузки фото:', err);
+              }
+            }
+          }
+
+          const actText = `
+АКТ ПОСЕЩЕНИЯ ОБЪЕКТА
+
+Объект: ${obj.name}
+Адрес: ${obj.address}
+Дата посещения: ${new Date(visit.date).toLocaleDateString('ru-RU')}
+Тип: ${visit.type === 'planned' ? 'Плановое' : 'Внеплановое'}
+
+Комментарий:
+${visit.comment}
+
+Техник: ${visit.createdBy}
+Дата создания акта: ${new Date(visit.createdAt).toLocaleString('ru-RU')}
+Количество фотографий: ${visit.photos.length}
+`;
+          visitFolder.file('акт.txt', actText);
+        }
+      }
+
+      setExportStatus('Создание архива...');
+      const content = await zip.generateAsync({ type: 'blob' });
+
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = `Акты_посещений_${new Date().toLocaleDateString('ru-RU').replace(/\./g, '-')}.zip`;
+      link.click();
+
+      setExportStatus('✓ Архив успешно создан и загружен');
+      setTimeout(() => setExportStatus(''), 3000);
+    } catch (error) {
+      setExportStatus('✗ Ошибка создания архива');
+      console.error('Export error:', error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -23,19 +97,15 @@ export default function ExportTab({ objects }: ExportTabProps) {
               <Icon name="FileDown" size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-white mb-2">Выгрузка в ЛКИР МЧС</h2>
+              <h2 className="text-xl font-semibold text-white mb-2">Выгрузка данных</h2>
               <p className="text-slate-400">
-                Экспорт всех актов посещений в формате для загрузки в систему МЧС. 
-                Требуется электронная подпись директора.
+                Скачайте архив со всеми актами посещений и фотографиями. 
+                Структура: Название объекта → Дата посещения → Фотографии и акт.
               </p>
             </div>
           </div>
 
           <div className="space-y-3 mb-6">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900/50">
-              <span className="text-slate-300">Период</span>
-              <span className="text-white font-medium">Январь 2026</span>
-            </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900/50">
               <span className="text-slate-300">Объектов</span>
               <span className="text-white font-medium">{objects.length}</span>
@@ -46,30 +116,50 @@ export default function ExportTab({ objects }: ExportTabProps) {
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900/50">
               <span className="text-slate-300">Фотографий</span>
-              <span className="text-white font-medium">
-                {objects.reduce((sum, obj) => 
-                  sum + obj.visits.reduce((s, v) => s + v.photos.length, 0), 0
-                )}
-              </span>
+              <span className="text-white font-medium">{totalPhotos}</span>
             </div>
           </div>
 
           <Button 
             onClick={handleExport}
+            disabled={isExporting || objects.length === 0}
             className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 h-12"
           >
             <Icon name="FileDown" size={18} className="mr-2" />
-            Начать экспорт с ЭП
+            {isExporting ? 'Создание архива...' : 'Скачать архив ZIP'}
           </Button>
 
-          <div className="mt-4 flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-            <Icon name="Info" size={20} className="text-amber-400 flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="text-amber-200 font-medium mb-1">Требования МЧС</p>
-              <p className="text-amber-300/80">
-                Для выгрузки необходима квалифицированная электронная подпись директора. 
-                Акты экспортируются в формате XML для ЛКИР МЧС.
+          {exportStatus && (
+            <div className={`mt-4 p-4 rounded-lg ${
+              exportStatus.startsWith('✓') 
+                ? 'bg-green-500/10 border border-green-500/30' 
+                : exportStatus.startsWith('✗')
+                ? 'bg-red-500/10 border border-red-500/30'
+                : 'bg-blue-500/10 border border-blue-500/30'
+            }`}>
+              <p className={`text-sm ${
+                exportStatus.startsWith('✓') 
+                  ? 'text-green-300' 
+                  : exportStatus.startsWith('✗')
+                  ? 'text-red-300'
+                  : 'text-blue-300'
+              }`}>
+                {exportStatus}
               </p>
+            </div>
+          )}
+
+          <div className="mt-4 flex items-start gap-3 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+            <Icon name="Info" size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="text-blue-200 font-medium mb-1">Структура архива</p>
+              <p className="text-blue-300/80 mb-2">
+                Архив содержит папки с названиями объектов, внутри — папки с датами посещений, 
+                в каждой — фотографии и текстовый файл акта.
+              </p>
+              <code className="text-xs bg-slate-900/50 px-2 py-1 rounded text-blue-200 block">
+                ТЦ "Галерея" → 20-01-2026 → фото_1.jpg, фото_2.jpg, акт.txt
+              </code>
             </div>
           </div>
         </CardContent>

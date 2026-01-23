@@ -22,6 +22,78 @@ export default function ObjectsListScreen({
   onOpenDirectorPanel 
 }: ObjectsListScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string>('');
+
+  const getAllPhotos = () => {
+    const photos: { id: string; data: string }[] = [];
+    
+    objects.forEach(obj => {
+      if (obj.objectPhoto) {
+        photos.push({
+          id: `obj_${obj.id}`,
+          data: obj.objectPhoto
+        });
+      }
+      
+      obj.visits.forEach(visit => {
+        visit.photos.forEach((photo, index) => {
+          photos.push({
+            id: `visit_${visit.id}_${index}`,
+            data: photo
+          });
+        });
+      });
+    });
+    
+    return photos;
+  };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    setSyncStatus('Подготовка данных...');
+    
+    try {
+      const photos = getAllPhotos();
+      
+      if (photos.length === 0) {
+        setSyncStatus('Нет фотографий для синхронизации');
+        setIsSyncing(false);
+        setTimeout(() => setSyncStatus(''), 2000);
+        return;
+      }
+
+      setSyncStatus(`Загрузка ${photos.length} фото на сервер...`);
+      
+      const response = await fetch('https://functions.poehali.dev/1dfc483e-0291-4d5e-8cf8-b29716b7da40', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'upload',
+          photos: photos
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.status === 'success') {
+        setSyncStatus(`✓ Загружено ${photos.length} фото`);
+        localStorage.setItem('mchs_last_sync', new Date().toISOString());
+        setTimeout(() => setSyncStatus(''), 3000);
+      } else {
+        setSyncStatus('✗ Ошибка синхронизации');
+        setTimeout(() => setSyncStatus(''), 3000);
+      }
+    } catch (error) {
+      setSyncStatus('✗ Ошибка подключения');
+      console.error('Sync error:', error);
+      setTimeout(() => setSyncStatus(''), 3000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const filteredObjects = objects.filter(obj => 
     obj.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -39,16 +111,48 @@ export default function ObjectsListScreen({
             </p>
           </div>
           
-          {userRole === 'director' && (
+          <div className="flex gap-3">
             <Button 
-              onClick={onOpenDirectorPanel}
-              className="bg-secondary hover:bg-secondary/90"
+              onClick={handleSync}
+              disabled={isSyncing}
+              variant="outline"
+              className="border-slate-600 text-slate-300 hover:bg-slate-800"
             >
-              <Icon name="Settings" size={18} className="mr-2" />
-              Панель управления
+              <Icon name="CloudUpload" size={18} className="mr-2" />
+              {isSyncing ? 'Загрузка...' : 'Синхронизация'}
             </Button>
-          )}
+            
+            {userRole === 'director' && (
+              <Button 
+                onClick={onOpenDirectorPanel}
+                className="bg-secondary hover:bg-secondary/90"
+              >
+                <Icon name="Settings" size={18} className="mr-2" />
+                Панель управления
+              </Button>
+            )}
+          </div>
         </div>
+
+        {syncStatus && (
+          <div className={`mb-4 p-3 rounded-lg ${
+            syncStatus.startsWith('✓') 
+              ? 'bg-green-500/10 border border-green-500/30' 
+              : syncStatus.startsWith('✗')
+              ? 'bg-red-500/10 border border-red-500/30'
+              : 'bg-blue-500/10 border border-blue-500/30'
+          }`}>
+            <p className={`text-sm ${
+              syncStatus.startsWith('✓') 
+                ? 'text-green-300' 
+                : syncStatus.startsWith('✗')
+                ? 'text-red-300'
+                : 'text-blue-300'
+            }`}>
+              {syncStatus}
+            </p>
+          </div>
+        )}
 
         <div className="mb-6">
           <div className="relative">
