@@ -78,53 +78,70 @@ export default function SyncTab({ objects }: SyncTabProps) {
     
     try {
       const users = localStorage.getItem('mchs_users');
-      const payload = {
-        action: 'sync',
-        objects: objects,
-        users: users ? JSON.parse(users) : []
-      };
+      const BATCH_SIZE = 3;
+      const totalObjects = objects.length;
+      let uploadedPhotos = 0;
       
-      const payloadSize = new Blob([JSON.stringify(payload)]).size;
-      const sizeMB = (payloadSize / (1024 * 1024)).toFixed(2);
+      const objectsWithoutMedia = objects.map(obj => ({
+        ...obj,
+        objectPhoto: obj.objectPhoto?.startsWith('http') ? obj.objectPhoto : undefined,
+        visits: obj.visits.map(v => ({
+          ...v,
+          photos: v.photos.filter(p => p.startsWith('http'))
+        }))
+      }));
       
-      setSyncStatus(`Отправка данных (${sizeMB} МБ)...`);
-      
-      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.status === 'success') {
-        setSyncStatus(`✓ Синхронизировано ${result.data.objects.length} объектов, загружено ${result.uploaded_photos} фото`);
-        setLastSync(new Date().toLocaleString('ru-RU'));
-        localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects));
-        localStorage.setItem('mchs_last_sync', new Date().toISOString());
+      for (let i = 0; i < totalObjects; i += BATCH_SIZE) {
+        const batch = objects.slice(i, i + BATCH_SIZE);
+        const progress = Math.round((i / totalObjects) * 100);
+        setSyncStatus(`Отправка объектов ${i + 1}-${Math.min(i + BATCH_SIZE, totalObjects)} из ${totalObjects} (${progress}%)...`);
         
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        setSyncStatus(`✗ Ошибка: ${result.error || 'Неизвестная ошибка'}`);
+        const payload = {
+          action: 'sync',
+          objects: batch,
+          users: i === 0 ? (users ? JSON.parse(users) : []) : []
+        };
+        
+        const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} на пакете ${i + 1}-${Math.min(i + BATCH_SIZE, totalObjects)}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.status !== 'success') {
+          throw new Error(result.error || 'Неизвестная ошибка');
+        }
+        
+        uploadedPhotos += result.uploaded_photos || 0;
+        
+        objectsWithoutMedia.splice(i, batch.length, ...result.data.objects);
       }
+      
+      setSyncStatus(`✓ Синхронизировано ${totalObjects} объектов, загружено ${uploadedPhotos} фото`);
+      setLastSync(new Date().toLocaleString('ru-RU'));
+      localStorage.setItem('mchs_objects', JSON.stringify(objectsWithoutMedia));
+      localStorage.setItem('mchs_last_sync', new Date().toISOString());
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error: any) {
       const errorMsg = error.message || String(error);
       setSyncStatus(`✗ Ошибка: ${errorMsg}`);
       console.error('Sync error details:', {
         error,
         errorMessage: errorMsg,
-        objectsCount: objects.length,
-        payloadSizeMB: (new Blob([JSON.stringify({ action: 'sync', objects, users: JSON.parse(localStorage.getItem('mchs_users') || '[]') })]).size / (1024 * 1024)).toFixed(2)
+        objectsCount: objects.length
       });
-      alert(`Ошибка синхронизации: ${errorMsg}\n\nПроверьте консоль браузера (F12) для деталей.`);
+      alert(`Ошибка синхронизации: ${errorMsg}\n\nПопробуйте:\n1. Скачать резервную копию\n2. Уменьшить размер фото\n3. Связаться с поддержкой`);
     } finally {
       setIsSyncing(false);
     }
