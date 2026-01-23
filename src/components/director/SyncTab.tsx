@@ -78,56 +78,51 @@ export default function SyncTab({ objects }: SyncTabProps) {
     
     try {
       const users = localStorage.getItem('mchs_users');
-      const BATCH_SIZE = 3;
       const totalObjects = objects.length;
       let uploadedPhotos = 0;
+      const syncedObjects: any[] = [];
       
-      const objectsWithoutMedia = objects.map(obj => ({
-        ...obj,
-        objectPhoto: obj.objectPhoto?.startsWith('http') ? obj.objectPhoto : undefined,
-        visits: obj.visits.map(v => ({
-          ...v,
-          photos: v.photos.filter(p => p.startsWith('http'))
-        }))
-      }));
-      
-      for (let i = 0; i < totalObjects; i += BATCH_SIZE) {
-        const batch = objects.slice(i, i + BATCH_SIZE);
-        const progress = Math.round((i / totalObjects) * 100);
-        setSyncStatus(`Отправка объектов ${i + 1}-${Math.min(i + BATCH_SIZE, totalObjects)} из ${totalObjects} (${progress}%)...`);
+      for (let i = 0; i < totalObjects; i++) {
+        const obj = objects[i];
+        const progress = Math.round(((i + 1) / totalObjects) * 100);
         
-        const payload = {
+        const payloadStr = JSON.stringify({
           action: 'sync',
-          objects: batch,
+          objects: [obj],
           users: i === 0 ? (users ? JSON.parse(users) : []) : []
-        };
+        });
+        const sizeMB = (payloadStr.length / (1024 * 1024)).toFixed(2);
+        
+        setSyncStatus(`Отправка ${i + 1} из ${totalObjects} (${progress}%) • ${sizeMB} МБ`);
         
         const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(payload)
+          body: payloadStr
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status} на пакете ${i + 1}-${Math.min(i + BATCH_SIZE, totalObjects)}`);
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status} на объекте "${obj.name}": ${errorText.slice(0, 100)}`);
         }
 
         const result = await response.json();
         
         if (result.status !== 'success') {
-          throw new Error(result.error || 'Неизвестная ошибка');
+          throw new Error(`Объект "${obj.name}": ${result.error || 'Неизвестная ошибка'}`);
         }
         
         uploadedPhotos += result.uploaded_photos || 0;
+        syncedObjects.push(result.data.objects[0]);
         
-        objectsWithoutMedia.splice(i, batch.length, ...result.data.objects);
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
       
-      setSyncStatus(`✓ Синхронизировано ${totalObjects} объектов, загружено ${uploadedPhotos} фото`);
+      setSyncStatus(`✓ Синхронизировано ${totalObjects} объектов, загружено ${uploadedPhotos} фото/видео`);
       setLastSync(new Date().toLocaleString('ru-RU'));
-      localStorage.setItem('mchs_objects', JSON.stringify(objectsWithoutMedia));
+      localStorage.setItem('mchs_objects', JSON.stringify(syncedObjects));
       localStorage.setItem('mchs_last_sync', new Date().toISOString());
       
       setTimeout(() => {
@@ -141,7 +136,7 @@ export default function SyncTab({ objects }: SyncTabProps) {
         errorMessage: errorMsg,
         objectsCount: objects.length
       });
-      alert(`Ошибка синхронизации: ${errorMsg}\n\nПопробуйте:\n1. Скачать резервную копию\n2. Уменьшить размер фото\n3. Связаться с поддержкой`);
+      alert(`Ошибка синхронизации: ${errorMsg}\n\nПопробуйте:\n1. Скачать резервную копию\n2. Уменьшить размер фото/видео\n3. Связаться с поддержкой`);
     } finally {
       setIsSyncing(false);
     }
