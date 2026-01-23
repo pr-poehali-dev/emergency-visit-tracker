@@ -22,6 +22,9 @@ export interface SiteObject {
   id: string;
   name: string;
   address: string;
+  contactName?: string;
+  contactPhone?: string;
+  objectPhoto?: string;
   visits: Visit[];
 }
 
@@ -228,6 +231,7 @@ function Index() {
           users={users}
           onBack={handleBackToObjects}
           onUpdateUsers={setUsers}
+          onUpdateObjects={setObjects}
         />
       )}
     </div>

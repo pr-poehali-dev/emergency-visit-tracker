@@ -7,15 +7,18 @@ import type { SiteObject, User } from '@/pages/Index';
 import ExportTab from './director/ExportTab';
 import ObjectsTab from './director/ObjectsTab';
 import UsersTab from './director/UsersTab';
+import ObjectsManagementTab from './director/ObjectsManagementTab';
+import SyncTab from './director/SyncTab';
 
 interface DirectorPanelProps {
   objects: SiteObject[];
   users: User[];
   onBack: () => void;
   onUpdateUsers: (users: User[]) => void;
+  onUpdateObjects: (objects: SiteObject[]) => void;
 }
 
-export default function DirectorPanel({ objects, users, onBack, onUpdateUsers }: DirectorPanelProps) {
+export default function DirectorPanel({ objects, users, onBack, onUpdateUsers, onUpdateObjects }: DirectorPanelProps) {
   const [selectedTab, setSelectedTab] = useState('export');
 
   const totalVisits = objects.reduce((sum, obj) => sum + obj.visits.length, 0);
@@ -115,7 +118,15 @@ export default function DirectorPanel({ objects, users, onBack, onUpdateUsers }:
             </TabsTrigger>
             <TabsTrigger value="objects" className="data-[state=active]:bg-primary data-[state=active]:text-white">
               <Icon name="Building2" size={16} className="mr-2" />
-              Управление объектами
+              Объекты
+            </TabsTrigger>
+            <TabsTrigger value="manage" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+              <Icon name="Settings" size={16} className="mr-2" />
+              Управление
+            </TabsTrigger>
+            <TabsTrigger value="sync" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+              <Icon name="CloudUpload" size={16} className="mr-2" />
+              Синхронизация
             </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-white">
               <Icon name="Users" size={16} className="mr-2" />
@@ -129,6 +140,14 @@ export default function DirectorPanel({ objects, users, onBack, onUpdateUsers }:
 
           <TabsContent value="objects">
             <ObjectsTab objects={objects} />
+          </TabsContent>
+
+          <TabsContent value="manage">
+            <ObjectsManagementTab objects={objects} onUpdateObjects={onUpdateObjects} />
+          </TabsContent>
+
+          <TabsContent value="sync">
+            <SyncTab objects={objects} />
           </TabsContent>
 
           <TabsContent value="users">

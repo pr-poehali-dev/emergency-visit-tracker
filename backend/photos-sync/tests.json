@@ -1,0 +1,37 @@
+{
+  "tests": [
+    {
+      "name": "Upload photos",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "upload",
+        "photos": [
+          {
+            "id": "test123",
+            "data": "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+          }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "status": "success",
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Download photos",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "download"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "status": "success"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
