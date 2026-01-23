@@ -85,6 +85,7 @@ export default function ObjectsListScreen({
           <div className="flex gap-3">
             <Button 
               onClick={() => {
+                localStorage.removeItem('mchs_session');
                 localStorage.removeItem('mchs_current_user');
                 window.location.reload();
               }}

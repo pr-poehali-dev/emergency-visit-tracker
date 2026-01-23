@@ -22,6 +22,7 @@ export default function CreateVisitScreen({
 }: CreateVisitScreenProps) {
   const [visitType, setVisitType] = useState<'planned' | 'unplanned' | null>(null);
   const [comment, setComment] = useState('');
+  const [unplannedReason, setUnplannedReason] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,6 +88,11 @@ export default function CreateVisitScreen({
       return;
     }
 
+    if (visitType === 'unplanned' && !unplannedReason.trim()) {
+      alert('Укажите причину внепланового посещения');
+      return;
+    }
+
     if (photos.length === 0) {
       alert('Добавьте хотя бы одно фото');
       return;
@@ -98,10 +104,14 @@ export default function CreateVisitScreen({
     }
 
     try {
+      const finalComment = visitType === 'unplanned' 
+        ? `Причина: ${unplannedReason.trim()}\n\n${comment.trim()}`
+        : comment.trim();
+
       onSave({
         date: new Date().toISOString().split('T')[0],
         type: visitType,
-        comment: comment.trim(),
+        comment: finalComment,
         photos,
         createdBy: userName
       });
@@ -126,7 +136,20 @@ export default function CreateVisitScreen({
           
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Новое посещение</h1>
-            <p className="text-slate-400">{object.name}</p>
+            <div className="space-y-1">
+              <p className="text-lg text-white font-semibold">{object.name}</p>
+              <p className="text-slate-400 text-sm flex items-center gap-1">
+                <Icon name="MapPin" size={14} />
+                {object.address}
+              </p>
+              {object.contactName && (
+                <p className="text-slate-400 text-sm flex items-center gap-1">
+                  <Icon name="User" size={14} />
+                  {object.contactName}
+                  {object.contactPhone && ` • ${object.contactPhone}`}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -200,6 +223,21 @@ export default function CreateVisitScreen({
                         </span>
                       </div>
                     </div>
+
+                    {visitType === 'unplanned' && (
+                      <div>
+                        <Label htmlFor="unplanned-reason" className="text-slate-200 mb-2 block">
+                          Причина внепланового посещения *
+                        </Label>
+                        <Textarea
+                          id="unplanned-reason"
+                          placeholder="Заявка клиента, сработка сигнализации, авария..."
+                          value={unplannedReason}
+                          onChange={(e) => setUnplannedReason(e.target.value)}
+                          className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500 min-h-[80px]"
+                        />
+                      </div>
+                    )}
 
                     <div>
                       <Label htmlFor="comment" className="text-slate-200 mb-2 block">

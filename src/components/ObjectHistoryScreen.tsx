@@ -48,21 +48,43 @@ export default function ObjectHistoryScreen({
           </Button>
           
           <div className="flex items-start justify-between flex-wrap gap-4">
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl font-bold text-white mb-2">{object.name}</h1>
-              <p className="text-slate-400 flex items-center gap-2">
-                <Icon name="MapPin" size={16} />
-                {object.address}
-              </p>
+              <div className="space-y-1">
+                <p className="text-slate-400 flex items-center gap-2">
+                  <Icon name="MapPin" size={16} />
+                  {object.address}
+                </p>
+                {object.contactName && (
+                  <p className="text-slate-400 flex items-center gap-2">
+                    <Icon name="User" size={16} />
+                    {object.contactName}
+                    {object.contactPhone && ` • ${object.contactPhone}`}
+                  </p>
+                )}
+              </div>
             </div>
 
-            <Button 
-              onClick={onCreateVisit}
-              className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
-            >
-              <Icon name="Plus" size={18} className="mr-2" />
-              Добавить посещение
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                onClick={onCreateVisit}
+                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+              >
+                <Icon name="Plus" size={18} className="mr-2" />
+                Добавить посещение
+              </Button>
+              
+              {userRole === 'director' && (
+                <Button 
+                  variant="outline"
+                  onClick={() => alert('Функция в разработке')}
+                  className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                >
+                  <Icon name="ClipboardList" size={18} className="mr-2" />
+                  Создать задачу
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
