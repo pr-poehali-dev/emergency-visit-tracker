@@ -152,6 +152,22 @@ export default function CreateVisitScreen({
           </div>
         </div>
 
+        {object.description && (
+          <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <Icon name="FileText" size={20} className="text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-medium mb-1">Описание объекта</h3>
+                  <p className="text-slate-300 text-sm leading-relaxed">{object.description}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="space-y-6">
           {!visitType ? (
             <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm">
