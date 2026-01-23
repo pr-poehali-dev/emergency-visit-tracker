@@ -1,0 +1,46 @@
+{
+  "tests": [
+    {
+      "name": "Get all objects",
+      "method": "GET",
+      "path": "/?action=objects",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "0": {
+          "id": "number",
+          "name": "string",
+          "address": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get statistics",
+      "method": "GET",
+      "path": "/?action=stats",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "total_objects": "number",
+        "total_visits": "number"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login test user",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {
+        "username": "tech",
+        "password": "tech"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "user": {
+          "username": "string",
+          "role": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
