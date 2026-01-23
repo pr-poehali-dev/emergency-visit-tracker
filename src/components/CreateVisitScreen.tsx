@@ -97,13 +97,18 @@ export default function CreateVisitScreen({
       return;
     }
 
-    onSave({
-      date: new Date().toISOString().split('T')[0],
-      type: visitType,
-      comment: comment.trim(),
-      photos,
-      createdBy: userName
-    });
+    try {
+      onSave({
+        date: new Date().toISOString().split('T')[0],
+        type: visitType,
+        comment: comment.trim(),
+        photos,
+        createdBy: userName
+      });
+    } catch (error) {
+      console.error('Save visit error:', error);
+      alert('Ошибка сохранения посещения');
+    }
   };
 
   return (
@@ -217,7 +222,7 @@ export default function CreateVisitScreen({
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h2 className="text-xl font-semibold text-white">Фотофиксация</h2>
-                      <p className="text-sm text-slate-400 mt-1">Обязательное требование МЧС</p>
+                      <p className="text-sm text-slate-400 mt-1">Добавьте фото с объекта</p>
                     </div>
                     <div className="flex gap-2">
                       <Button 
@@ -321,7 +326,7 @@ export default function CreateVisitScreen({
                 <Icon name="Lock" size={20} className="text-yellow-500 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
                   <p className="text-slate-300 font-medium mb-1">Защита данных</p>
-                  <p className="text-slate-400">После сохранения акт нельзя будет редактировать или удалить. Все изменения логируются.</p>
+                  <p className="text-slate-400">После сохранения посещение может редактировать только директор. Все изменения логируются.</p>
                 </div>
               </div>
             </>

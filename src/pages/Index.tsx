@@ -192,25 +192,31 @@ function Index() {
   const handleSaveVisit = (visit: Omit<Visit, 'id' | 'createdAt'>) => {
     if (!selectedObject) return;
 
-    const newVisit: Visit = {
-      ...visit,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const newVisit: Visit = {
+        ...visit,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString()
+      };
 
-    setObjects(prevObjects => 
-      prevObjects.map(obj => 
+      const updatedObjects = objects.map(obj => 
         obj.id === selectedObject.id
           ? { ...obj, visits: [...obj.visits, newVisit] }
           : obj
-      )
-    );
+      );
 
-    setSelectedObject(prev => 
-      prev ? { ...prev, visits: [...prev.visits, newVisit] } : null
-    );
+      setObjects(updatedObjects);
+      localStorage.setItem('mchs_objects', JSON.stringify(updatedObjects));
 
-    setCurrentScreen('history');
+      setSelectedObject(prev => 
+        prev ? { ...prev, visits: [...prev.visits, newVisit] } : null
+      );
+
+      setCurrentScreen('history');
+    } catch (error) {
+      console.error('Save visit error:', error);
+      alert('Ошибка сохранения посещения. Попробуйте еще раз.');
+    }
   };
 
   return (
@@ -230,8 +236,17 @@ function Index() {
       {currentScreen === 'history' && selectedObject && (
         <ObjectHistoryScreen 
           object={selectedObject}
+          userRole={userRole}
           onBack={handleBackToObjects}
           onCreateVisit={handleCreateVisit}
+          onUpdateObject={(updatedObject) => {
+            const updatedObjects = objects.map(obj => 
+              obj.id === updatedObject.id ? updatedObject : obj
+            );
+            setObjects(updatedObjects);
+            localStorage.setItem('mchs_objects', JSON.stringify(updatedObjects));
+            setSelectedObject(updatedObject);
+          }}
         />
       )}
       

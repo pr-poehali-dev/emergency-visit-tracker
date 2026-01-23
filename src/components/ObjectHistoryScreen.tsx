@@ -7,16 +7,21 @@ import type { SiteObject } from '@/pages/Index';
 
 interface ObjectHistoryScreenProps {
   object: SiteObject;
+  userRole: 'technician' | 'director' | null;
   onBack: () => void;
   onCreateVisit: () => void;
+  onUpdateObject: (updatedObject: SiteObject) => void;
 }
 
 export default function ObjectHistoryScreen({ 
   object, 
+  userRole,
   onBack, 
-  onCreateVisit 
+  onCreateVisit,
+  onUpdateObject
 }: ObjectHistoryScreenProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [editingVisit, setEditingVisit] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -120,10 +125,24 @@ export default function ObjectHistoryScreen({
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Icon name="Lock" size={16} className="text-slate-500" />
-                        <span className="text-xs text-slate-500">Защищено</span>
-                      </div>
+                      {userRole === 'director' ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingVisit(visit.id)}
+                            className="text-slate-400 hover:text-white"
+                          >
+                            <Icon name="Edit" size={16} className="mr-1" />
+                            Редактировать
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Icon name="Lock" size={16} className="text-slate-500" />
+                          <span className="text-xs text-slate-500">Защищено</span>
+                        </div>
+                      )}
                     </div>
 
                     {visit.photos.length > 0 && (
@@ -131,19 +150,63 @@ export default function ObjectHistoryScreen({
                         {visit.photos.map((photo, photoIndex) => (
                           <div 
                             key={photoIndex}
-                            className="relative aspect-video rounded-lg overflow-hidden group cursor-pointer"
-                            onClick={() => setSelectedPhoto(photo)}
+                            className="relative aspect-video rounded-lg overflow-hidden group"
                           >
                             <img 
                               src={photo} 
                               alt={`Фото ${photoIndex + 1}`}
-                              className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                              className="w-full h-full object-cover transition-transform group-hover:scale-110 cursor-pointer"
+                              onClick={() => setSelectedPhoto(photo)}
                             />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            {editingVisit === visit.id && userRole === 'director' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const updatedPhotos = visit.photos.filter((_, i) => i !== photoIndex);
+                                  const updatedVisits = object.visits.map(v => 
+                                    v.id === visit.id ? { ...v, photos: updatedPhotos } : v
+                                  );
+                                  onUpdateObject({ ...object, visits: updatedVisits });
+                                }}
+                                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors z-10"
+                              >
+                                <Icon name="Trash2" size={16} className="text-white" />
+                              </button>
+                            )}
+                            <div 
+                              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                              onClick={() => setSelectedPhoto(photo)}
+                            >
                               <Icon name="ZoomIn" size={24} className="text-white" />
                             </div>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {editingVisit === visit.id && userRole === 'director' && (
+                      <div className="mt-4 flex gap-2">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('Удалить это посещение? Это действие нельзя отменить.')) {
+                              const updatedVisits = object.visits.filter(v => v.id !== visit.id);
+                              onUpdateObject({ ...object, visits: updatedVisits });
+                              setEditingVisit(null);
+                            }
+                          }}
+                        >
+                          <Icon name="Trash2" size={16} className="mr-2" />
+                          Удалить посещение
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingVisit(null)}
+                        >
+                          Отмена
+                        </Button>
                       </div>
                     )}
                   </CardContent>

@@ -28,6 +28,23 @@ export default function DirectorPanel({ objects, users, onBack, onUpdateUsers, o
   );
   const unplannedVisits = totalVisits - plannedVisits;
 
+  const userStats = users.map(user => {
+    const userVisits = objects.reduce((count, obj) => {
+      return count + obj.visits.filter(v => v.createdBy === user.fullName).length;
+    }, 0);
+    
+    const userObjects = objects.filter(obj => 
+      obj.visits.some(v => v.createdBy === user.fullName)
+    ).length;
+
+    return {
+      name: user.fullName,
+      role: user.role,
+      visits: userVisits,
+      objects: userObjects
+    };
+  }).sort((a, b) => b.visits - a.visits);
+
   return (
     <div className="min-h-screen p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
@@ -51,7 +68,7 @@ export default function DirectorPanel({ objects, users, onBack, onUpdateUsers, o
             </div>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid md:grid-cols-4 gap-4 mb-6">
             <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -108,6 +125,45 @@ export default function DirectorPanel({ objects, users, onBack, onUpdateUsers, o
               </CardContent>
             </Card>
           </div>
+
+          <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm mb-6">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <Icon name="Users" size={20} className="text-primary" />
+                Статистика по сотрудникам
+              </h3>
+              <div className="space-y-3">
+                {userStats.map((stat, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-semibold">
+                        {stat.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{stat.name}</p>
+                        <p className="text-sm text-slate-400">
+                          {stat.role === 'director' ? 'Директор' : 'Техник'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-6 text-right">
+                      <div>
+                        <p className="text-2xl font-bold text-white">{stat.objects}</p>
+                        <p className="text-xs text-slate-400">объектов</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary">{stat.visits}</p>
+                        <p className="text-xs text-slate-400">визитов</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {userStats.length === 0 && (
+                  <p className="text-slate-400 text-center py-4">Нет данных о сотрудниках</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">

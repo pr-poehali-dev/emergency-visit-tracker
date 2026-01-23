@@ -84,6 +84,18 @@ export default function ObjectsListScreen({
           
           <div className="flex gap-3">
             <Button 
+              onClick={() => {
+                localStorage.removeItem('mchs_current_user');
+                window.location.reload();
+              }}
+              variant="ghost"
+              className="text-slate-400 hover:text-white hover:bg-slate-800"
+            >
+              <Icon name="LogOut" size={18} className="mr-2" />
+              Выход
+            </Button>
+
+            <Button 
               onClick={handleSync}
               disabled={isSyncing}
               variant="outline"

@@ -34,9 +34,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <div className="mb-6 p-6 rounded-2xl bg-slate-800/30 backdrop-blur-sm border border-slate-700/50">
+          <div className="mb-6">
             <img 
-              src="https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/818cb62f-8db7-4e06-86f9-e2e79672b269.png" 
+              src="https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/eb661434-930c-48fa-a02b-0fa286d20751.png" 
               alt="PROFIRE - ЮГ" 
               className="mx-auto w-80 h-auto"
             />
