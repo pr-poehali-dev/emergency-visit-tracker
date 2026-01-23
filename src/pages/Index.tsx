@@ -3,29 +3,48 @@ import LoginScreen from '@/components/LoginScreen';
 import ObjectsListScreen from '@/components/ObjectsListScreen';
 import ObjectHistoryScreen from '@/components/ObjectHistoryScreen';
 import CreateVisitScreen from '@/components/CreateVisitScreen';
+import CreateTaskScreen from '@/components/CreateTaskScreen';
+import InstallationObjectScreen from '@/components/InstallationObjectScreen';
 import DirectorPanel from '@/components/DirectorPanel';
 
-type Screen = 'login' | 'objects' | 'history' | 'create' | 'director';
-type UserRole = 'technician' | 'director' | null;
+type Screen = 'login' | 'objects' | 'history' | 'create' | 'director' | 'createTask' | 'installation';
+type UserRole = 'technician' | 'director' | 'supervisor' | null;
 
 export interface Visit {
   id: string;
   date: string;
-  type: 'planned' | 'unplanned';
+  type: 'planned' | 'unplanned' | 'task';
   comment: string;
   photos: string[];
   createdBy: string;
   createdAt: string;
+  taskDescription?: string;
+  taskCompleted?: boolean;
+  taskCompletedBy?: string;
+  taskCompletedAt?: string;
 }
 
 export interface SiteObject {
   id: string;
   name: string;
   address: string;
+  description?: string;
   contactName?: string;
   contactPhone?: string;
   objectPhoto?: string;
+  objectType?: 'regular' | 'installation';
   visits: Visit[];
+  installationDays?: InstallationDay[];
+}
+
+export interface InstallationDay {
+  id: string;
+  dayNumber: number;
+  date: string;
+  comment: string;
+  photos: string[];
+  createdBy: string;
+  createdAt: string;
 }
 
 export interface User {
@@ -33,7 +52,8 @@ export interface User {
   username: string;
   password: string;
   fullName: string;
-  role: 'technician' | 'director';
+  phone?: string;
+  role: 'technician' | 'director' | 'supervisor';
   createdAt: string;
 }
 
@@ -169,11 +189,19 @@ function Index() {
 
   const handleSelectObject = (obj: SiteObject) => {
     setSelectedObject(obj);
-    setCurrentScreen('history');
+    if (obj.objectType === 'installation') {
+      setCurrentScreen('installation');
+    } else {
+      setCurrentScreen('history');
+    }
   };
 
   const handleCreateVisit = () => {
     setCurrentScreen('create');
+  };
+
+  const handleCreateTask = () => {
+    setCurrentScreen('createTask');
   };
 
   const handleBackToObjects = () => {
@@ -237,8 +265,10 @@ function Index() {
         <ObjectHistoryScreen 
           object={selectedObject}
           userRole={userRole}
+          userName={userName}
           onBack={handleBackToObjects}
           onCreateVisit={handleCreateVisit}
+          onCreateTask={handleCreateTask}
           onUpdateObject={(updatedObject) => {
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
@@ -256,6 +286,38 @@ function Index() {
           userName={userName}
           onBack={handleBackToHistory}
           onSave={handleSaveVisit}
+        />
+      )}
+      
+      {currentScreen === 'createTask' && selectedObject && (
+        <CreateTaskScreen 
+          object={selectedObject}
+          userName={userName}
+          onBack={handleBackToHistory}
+          onSave={(updatedObject) => {
+            const updatedObjects = objects.map(obj => 
+              obj.id === updatedObject.id ? updatedObject : obj
+            );
+            setObjects(updatedObjects);
+            localStorage.setItem('mchs_objects', JSON.stringify(updatedObjects));
+            setSelectedObject(updatedObject);
+          }}
+        />
+      )}
+      
+      {currentScreen === 'installation' && selectedObject && (
+        <InstallationObjectScreen 
+          object={selectedObject}
+          userName={userName}
+          onBack={handleBackToObjects}
+          onUpdateObject={(updatedObject) => {
+            const updatedObjects = objects.map(obj => 
+              obj.id === updatedObject.id ? updatedObject : obj
+            );
+            setObjects(updatedObjects);
+            localStorage.setItem('mchs_objects', JSON.stringify(updatedObjects));
+            setSelectedObject(updatedObject);
+          }}
         />
       )}
       

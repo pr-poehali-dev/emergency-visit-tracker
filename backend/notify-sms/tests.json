@@ -1,0 +1,33 @@
+{
+  "tests": [
+    {
+      "name": "Send SMS notifications successfully",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "phones": ["+79991234567", "+79997654321"],
+        "object_name": "ТЦ Галерея",
+        "task_description": "Проверить систему пожаротушения"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "status": "success",
+        "message": "string",
+        "notifications": "array"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Handle empty phone list",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "phones": [],
+        "object_name": "Test",
+        "task_description": "Test"
+      },
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

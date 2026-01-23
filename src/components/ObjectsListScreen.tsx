@@ -8,7 +8,7 @@ import type { SiteObject } from '@/pages/Index';
 
 interface ObjectsListScreenProps {
   objects: SiteObject[];
-  userRole: 'technician' | 'director' | null;
+  userRole: 'technician' | 'director' | 'supervisor' | null;
   userName: string;
   onSelectObject: (obj: SiteObject) => void;
   onOpenDirectorPanel: () => void;
@@ -78,7 +78,7 @@ export default function ObjectsListScreen({
           <div>
             <h1 className="text-3xl font-bold text-white mb-1">Объекты</h1>
             <p className="text-slate-400">
-              Привет, {userName} • {userRole === 'director' ? 'Директор' : 'Техник'}
+              Привет, {userName} • {userRole === 'director' ? 'Директор' : userRole === 'supervisor' ? 'Руководитель' : 'Техник'}
             </p>
           </div>
           
@@ -194,14 +194,33 @@ export default function ObjectsListScreen({
                   <div className="flex items-center gap-2">
                     <Icon name="Calendar" size={16} className="text-slate-400" />
                     <span className="text-sm text-slate-300">
-                      {obj.visits.length > 0 
-                        ? `${obj.visits.length} посещений` 
-                        : 'Нет посещений'
+                      {obj.objectType === 'installation'
+                        ? (obj.installationDays && obj.installationDays.length > 0
+                          ? `${obj.installationDays.length} дней работы`
+                          : 'Нет дней работы')
+                        : (obj.visits && obj.visits.length > 0 
+                          ? `${obj.visits.length} посещений` 
+                          : 'Нет посещений')
                       }
                     </span>
                   </div>
                   
-                  {obj.visits.length > 0 && (
+                  {obj.objectType === 'installation' ? (
+                    <Badge 
+                      variant="secondary" 
+                      className="bg-amber-500/20 text-amber-400 border-amber-500/30"
+                    >
+                      <Icon name="HardHat" size={12} className="mr-1" />
+                      Монтаж
+                    </Badge>
+                  ) : (obj.visits && obj.visits.some(v => v.type === 'task' && !v.taskCompleted)) ? (
+                    <Badge 
+                      variant="secondary" 
+                      className="bg-red-500/20 text-red-400 border-red-500/30 animate-pulse"
+                    >
+                      Есть задачи
+                    </Badge>
+                  ) : (obj.visits && obj.visits.length > 0) && (
                     <Badge 
                       variant="secondary" 
                       className="bg-primary/20 text-primary border-primary/30"

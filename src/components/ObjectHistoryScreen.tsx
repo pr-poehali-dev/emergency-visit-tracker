@@ -7,21 +7,27 @@ import type { SiteObject } from '@/pages/Index';
 
 interface ObjectHistoryScreenProps {
   object: SiteObject;
-  userRole: 'technician' | 'director' | null;
+  userRole: 'technician' | 'director' | 'supervisor' | null;
+  userName: string;
   onBack: () => void;
   onCreateVisit: () => void;
+  onCreateTask: () => void;
   onUpdateObject: (updatedObject: SiteObject) => void;
 }
 
 export default function ObjectHistoryScreen({ 
   object, 
   userRole,
+  userName,
   onBack, 
   onCreateVisit,
+  onCreateTask,
   onUpdateObject
 }: ObjectHistoryScreenProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [editingVisit, setEditingVisit] = useState<string | null>(null);
+  const [taskComment, setTaskComment] = useState('');
+  const [taskPhotos, setTaskPhotos] = useState<string[]>([]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -32,6 +38,47 @@ export default function ObjectHistoryScreen({
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
+  };
+
+  const handleCompleteTask = (visitId: string) => {
+    if (!taskComment.trim()) {
+      alert('Добавьте комментарий к выполненной задаче');
+      return;
+    }
+    if (taskPhotos.length === 0) {
+      alert('Добавьте хотя бы одно фото подтверждения');
+      return;
+    }
+
+    const updatedVisits = object.visits.map(v => 
+      v.id === visitId 
+        ? { 
+            ...v, 
+            comment: taskComment,
+            photos: taskPhotos,
+            taskCompleted: true,
+            taskCompletedBy: userName,
+            taskCompletedAt: new Date().toISOString()
+          } 
+        : v
+    );
+
+    onUpdateObject({ ...object, visits: updatedVisits });
+    setEditingVisit(null);
+    setTaskComment('');
+    setTaskPhotos([]);
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setTaskPhotos([...taskPhotos, base64]);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -77,7 +124,7 @@ export default function ObjectHistoryScreen({
               {userRole === 'director' && (
                 <Button 
                   variant="outline"
-                  onClick={() => alert('Функция в разработке')}
+                  onClick={onCreateTask}
                   className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
                   <Icon name="ClipboardList" size={18} className="mr-2" />
@@ -114,9 +161,13 @@ export default function ObjectHistoryScreen({
                   className="border-slate-700 bg-slate-800/50 backdrop-blur-sm ml-20 animate-fade-in relative"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="absolute -left-[52px] top-8 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/30">
+                  <div className={`absolute -left-[52px] top-8 w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${
+                    visit.type === 'task' 
+                      ? (visit.taskCompleted ? 'bg-green-600 shadow-green-500/30' : 'bg-red-600 shadow-red-500/30')
+                      : 'bg-gradient-to-br from-primary to-secondary shadow-primary/30'
+                  }`}>
                     <Icon 
-                      name={visit.type === 'planned' ? 'Calendar' : 'AlertCircle'} 
+                      name={visit.type === 'planned' ? 'Calendar' : visit.type === 'task' ? 'ClipboardList' : 'AlertCircle'} 
                       size={16} 
                       className="text-white" 
                     />
@@ -131,16 +182,24 @@ export default function ObjectHistoryScreen({
                             className={
                               visit.type === 'planned' 
                                 ? 'bg-primary/20 text-primary border-primary/30' 
+                                : visit.type === 'task'
+                                ? (visit.taskCompleted ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30')
                                 : 'bg-accent/20 text-accent border-accent/30'
                             }
                           >
-                            {visit.type === 'planned' ? 'Плановое' : 'Внеплановое'}
+                            {visit.type === 'planned' ? 'Плановое' : visit.type === 'task' ? (visit.taskCompleted ? 'Задача выполнена' : 'Задача') : 'Внеплановое'}
                           </Badge>
                           <span className="text-sm text-slate-400">
                             {formatDate(visit.createdAt)}
                           </span>
                         </div>
-                        <p className="text-slate-300 mb-2">{visit.comment}</p>
+                        {visit.type === 'task' && visit.taskDescription && (
+                          <div className="mb-2 p-3 bg-slate-900/50 rounded-lg border border-slate-700">
+                            <p className="text-sm text-slate-400 mb-1">Задача от директора:</p>
+                            <p className="text-slate-300">{visit.taskDescription}</p>
+                          </div>
+                        )}
+                        {visit.comment && <p className="text-slate-300 mb-2">{visit.comment}</p>}
                         <p className="text-sm text-slate-500 flex items-center gap-1">
                           <Icon name="User" size={14} />
                           {visit.createdBy}
@@ -159,6 +218,15 @@ export default function ObjectHistoryScreen({
                             Редактировать
                           </Button>
                         </div>
+                      ) : visit.type === 'task' && !visit.taskCompleted ? (
+                        <Button
+                          size="sm"
+                          onClick={() => setEditingVisit(visit.id)}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <Icon name="CheckCircle" size={16} className="mr-1" />
+                          Выполнить задачу
+                        </Button>
                       ) : (
                         <div className="flex items-center gap-2">
                           <Icon name="Lock" size={16} className="text-slate-500" />
@@ -203,6 +271,71 @@ export default function ObjectHistoryScreen({
                             </div>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {editingVisit === visit.id && visit.type === 'task' && !visit.taskCompleted && userRole !== 'director' && (
+                      <div className="mt-4 space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+                        <h4 className="text-white font-medium flex items-center gap-2">
+                          <Icon name="ClipboardCheck" size={18} className="text-green-400" />
+                          Выполнение задачи
+                        </h4>
+                        
+                        <div>
+                          <label className="text-slate-200 text-sm mb-2 block">Комментарий к выполнению *</label>
+                          <textarea
+                            placeholder="Опишите что было сделано..."
+                            value={taskComment}
+                            onChange={(e) => setTaskComment(e.target.value)}
+                            className="w-full bg-slate-800 border border-slate-600 text-white rounded-md px-3 py-2 min-h-[80px] resize-y"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-slate-200 text-sm mb-2 block">Фото отчёта *</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="w-full bg-slate-800 border border-slate-600 text-white rounded-md file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-green-600 file:text-white file:cursor-pointer hover:file:bg-green-700"
+                          />
+                          {taskPhotos.length > 0 && (
+                            <div className="grid grid-cols-3 gap-2 mt-3">
+                              {taskPhotos.map((photo, idx) => (
+                                <div key={idx} className="relative aspect-video rounded overflow-hidden">
+                                  <img src={photo} alt={`Фото ${idx + 1}`} className="w-full h-full object-cover" />
+                                  <button
+                                    onClick={() => setTaskPhotos(taskPhotos.filter((_, i) => i !== idx))}
+                                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center"
+                                  >
+                                    <Icon name="X" size={14} className="text-white" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleCompleteTask(visit.id)}
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                          >
+                            <Icon name="Check" size={16} className="mr-2" />
+                            Завершить задачу
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setEditingVisit(null);
+                              setTaskComment('');
+                              setTaskPhotos([]);
+                            }}
+                            className="border-slate-600 text-slate-300"
+                          >
+                            Отмена
+                          </Button>
+                        </div>
                       </div>
                     )}
 

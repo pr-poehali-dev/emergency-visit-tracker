@@ -20,7 +20,8 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
     username: '',
     password: '',
     fullName: '',
-    role: 'technician' as 'technician' | 'director'
+    phone: '',
+    role: 'technician' as 'technician' | 'director' | 'supervisor'
   });
 
   const handleAddUser = () => {
@@ -41,7 +42,7 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
     };
 
     onUpdateUsers([...users, user]);
-    setNewUser({ username: '', password: '', fullName: '', role: 'technician' });
+    setNewUser({ username: '', password: '', fullName: '', phone: '', role: 'technician' });
     setIsAddingUser(false);
   };
 
@@ -121,8 +122,20 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                 />
               </div>
               <div>
+                <Label className="text-slate-200 mb-2 block">Телефон (для SMS-уведомлений)</Label>
+                <Input
+                  placeholder="+7 (999) 123-45-67"
+                  value={newUser.phone}
+                  onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                  className="bg-slate-900/50 border-slate-600 text-white"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Техники получат SMS при назначении задачи
+                </p>
+              </div>
+              <div>
                 <Label className="text-slate-200 mb-2 block">Роль</Label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={() => setNewUser({...newUser, role: 'technician'})}
                     className={`p-4 rounded-lg border-2 transition-all ${
@@ -133,6 +146,17 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                   >
                     <Icon name="Wrench" size={20} className="text-primary mx-auto mb-2" />
                     <p className="text-white font-medium">Техник</p>
+                  </button>
+                  <button
+                    onClick={() => setNewUser({...newUser, role: 'supervisor'})}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      newUser.role === 'supervisor'
+                        ? 'border-accent bg-accent/10'
+                        : 'border-slate-700 bg-slate-900/50'
+                    }`}
+                  >
+                    <Icon name="UserCheck" size={20} className="text-accent mx-auto mb-2" />
+                    <p className="text-white font-medium text-sm">Руководитель</p>
                   </button>
                   <button
                     onClick={() => setNewUser({...newUser, role: 'director'})}
@@ -146,6 +170,9 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                     <p className="text-white font-medium">Директор</p>
                   </button>
                 </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Руководитель имеет те же права, что и техник
+                </p>
               </div>
               <div className="flex gap-3 pt-2">
                 <Button 
@@ -159,7 +186,7 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                   variant="outline"
                   onClick={() => {
                     setIsAddingUser(false);
-                    setNewUser({ username: '', password: '', fullName: '', role: 'technician' });
+                    setNewUser({ username: '', password: '', fullName: '', phone: '', role: 'technician' });
                   }}
                   className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
@@ -204,8 +231,17 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                     />
                   </div>
                   <div>
+                    <Label className="text-slate-200 mb-2 block">Телефон (для SMS-уведомлений)</Label>
+                    <Input
+                      placeholder="+7 (999) 123-45-67"
+                      value={editingUser.phone || ''}
+                      onChange={(e) => setEditingUser({...editingUser, phone: e.target.value})}
+                      className="bg-slate-900/50 border-slate-600 text-white"
+                    />
+                  </div>
+                  <div>
                     <Label className="text-slate-200 mb-2 block">Роль</Label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
                       <button
                         onClick={() => setEditingUser({...editingUser, role: 'technician'})}
                         className={`p-3 rounded-lg border-2 transition-all ${
@@ -216,6 +252,17 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                       >
                         <Icon name="Wrench" size={18} className="text-primary mx-auto mb-1" />
                         <p className="text-white text-sm">Техник</p>
+                      </button>
+                      <button
+                        onClick={() => setEditingUser({...editingUser, role: 'supervisor'})}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          editingUser.role === 'supervisor'
+                            ? 'border-accent bg-accent/10'
+                            : 'border-slate-700 bg-slate-900/50'
+                        }`}
+                      >
+                        <Icon name="UserCheck" size={18} className="text-accent mx-auto mb-1" />
+                        <p className="text-white text-xs">Руководитель</p>
                       </button>
                       <button
                         onClick={() => setEditingUser({...editingUser, role: 'director'})}
@@ -252,16 +299,27 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
               ) : (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                      user.role === 'director' 
+                        ? 'bg-gradient-to-br from-secondary to-accent'
+                        : user.role === 'supervisor'
+                        ? 'bg-gradient-to-br from-accent to-primary'
+                        : 'bg-gradient-to-br from-primary to-secondary'
+                    }`}>
                       <Icon 
-                        name={user.role === 'director' ? 'Crown' : 'User'} 
+                        name={user.role === 'director' ? 'Crown' : user.role === 'supervisor' ? 'UserCheck' : 'Wrench'} 
                         size={20} 
                         className="text-white" 
                       />
                     </div>
                     <div>
                       <h3 className="text-white font-medium">{user.fullName}</h3>
-                      <p className="text-sm text-slate-400">@{user.username}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-slate-400">@{user.username}</p>
+                        {user.phone && (
+                          <span className="text-xs text-slate-500">• {user.phone}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -270,10 +328,12 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
                       className={
                         user.role === 'director'
                           ? 'bg-secondary/20 text-secondary border-secondary/30'
+                          : user.role === 'supervisor'
+                          ? 'bg-accent/20 text-accent border-accent/30'
                           : 'bg-primary/20 text-primary border-primary/30'
                       }
                     >
-                      {user.role === 'director' ? 'Директор' : 'Техник'}
+                      {user.role === 'director' ? 'Директор' : user.role === 'supervisor' ? 'Руководитель' : 'Техник'}
                     </Badge>
                     <div className="flex gap-2">
                       <Button

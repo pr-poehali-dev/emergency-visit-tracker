@@ -42,6 +42,7 @@ export default function InstallationObjectScreen({
     const newDay: InstallationDay = {
       id: Date.now().toString(),
       dayNumber: nextDayNumber,
+      date: new Date().toISOString(),
       comment: comment.trim(),
       photos,
       createdBy: userName,

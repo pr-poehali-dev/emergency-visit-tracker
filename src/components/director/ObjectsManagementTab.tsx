@@ -19,9 +19,11 @@ export default function ObjectsManagementTab({ objects, onUpdateObjects }: Objec
   const [newObject, setNewObject] = useState({
     name: '',
     address: '',
+    description: '',
     contactName: '',
     contactPhone: '',
-    objectPhoto: ''
+    objectPhoto: '',
+    objectType: 'regular' as 'regular' | 'installation'
   });
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>, isEditing: boolean) => {
@@ -49,11 +51,12 @@ export default function ObjectsManagementTab({ objects, onUpdateObjects }: Objec
     const object: SiteObject = {
       id: Date.now().toString(),
       ...newObject,
-      visits: []
+      visits: [],
+      installationDays: newObject.objectType === 'installation' ? [] : undefined
     };
 
     onUpdateObjects([...objects, object]);
-    setNewObject({ name: '', address: '', contactName: '', contactPhone: '', objectPhoto: '' });
+    setNewObject({ name: '', address: '', description: '', contactName: '', contactPhone: '', objectPhoto: '', objectType: 'regular' });
     setIsAddingObject(false);
   };
 
@@ -77,21 +80,38 @@ export default function ObjectsManagementTab({ objects, onUpdateObjects }: Objec
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-xl font-semibold text-white">Управление объектами</h2>
-        <Button 
-          onClick={() => setIsAddingObject(true)}
-          className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-        >
-          <Icon name="PlusCircle" size={18} className="mr-2" />
-          Добавить объект
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            onClick={() => {
+              setNewObject({ name: '', address: '', description: '', contactName: '', contactPhone: '', objectPhoto: '', objectType: 'regular' });
+              setIsAddingObject(true);
+            }}
+            className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+          >
+            <Icon name="PlusCircle" size={18} className="mr-2" />
+            Добавить объект
+          </Button>
+          <Button 
+            onClick={() => {
+              setNewObject({ name: '', address: '', description: '', contactName: '', contactPhone: '', objectPhoto: '', objectType: 'installation' });
+              setIsAddingObject(true);
+            }}
+            className="bg-gradient-to-r from-amber-600 to-amber-500 hover:opacity-90"
+          >
+            <Icon name="HardHat" size={18} className="mr-2" />
+            Добавить монтаж
+          </Button>
+        </div>
       </div>
 
       {isAddingObject && (
         <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm">
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Новый объект</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {newObject.objectType === 'installation' ? 'Новый монтаж' : 'Новый объект'}
+            </h3>
             <div className="space-y-4">
               <div>
                 <Label className="text-slate-200 mb-2 block">Название объекта *</Label>
@@ -109,6 +129,15 @@ export default function ObjectsManagementTab({ objects, onUpdateObjects }: Objec
                   value={newObject.address}
                   onChange={(e) => setNewObject({...newObject, address: e.target.value})}
                   className="bg-slate-900/50 border-slate-600 text-white"
+                />
+              </div>
+              <div>
+                <Label className="text-slate-200 mb-2 block">Описание объекта</Label>
+                <textarea
+                  placeholder="Краткое описание объекта..."
+                  value={newObject.description}
+                  onChange={(e) => setNewObject({...newObject, description: e.target.value})}
+                  className="w-full bg-slate-900/50 border border-slate-600 text-white rounded-md px-3 py-2 min-h-[80px] resize-y"
                 />
               </div>
               <div>
@@ -161,7 +190,7 @@ export default function ObjectsManagementTab({ objects, onUpdateObjects }: Objec
                   variant="outline"
                   onClick={() => {
                     setIsAddingObject(false);
-                    setNewObject({ name: '', address: '', contactName: '', contactPhone: '', objectPhoto: '' });
+                    setNewObject({ name: '', address: '', description: '', contactName: '', contactPhone: '', objectPhoto: '', objectType: 'regular' });
                   }}
                   className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
@@ -193,6 +222,14 @@ export default function ObjectsManagementTab({ objects, onUpdateObjects }: Objec
                       value={editingObject.address}
                       onChange={(e) => setEditingObject({...editingObject, address: e.target.value})}
                       className="bg-slate-900/50 border-slate-600 text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-slate-200 mb-2 block">Описание объекта</Label>
+                    <textarea
+                      value={editingObject.description || ''}
+                      onChange={(e) => setEditingObject({...editingObject, description: e.target.value})}
+                      className="w-full bg-slate-900/50 border border-slate-600 text-white rounded-md px-3 py-2 min-h-[80px] resize-y"
                     />
                   </div>
                   <div>
@@ -264,18 +301,29 @@ export default function ObjectsManagementTab({ objects, onUpdateObjects }: Objec
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h3 className="text-white font-medium text-lg">{object.name}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-white font-medium text-lg">{object.name}</h3>
+                          {object.objectType === 'installation' && (
+                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+                              <Icon name="HardHat" size={12} className="mr-1" />
+                              Монтаж
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-slate-400">{object.address}</p>
+                        {object.description && (
+                          <p className="text-sm text-slate-500 mt-1">{object.description}</p>
+                        )}
                       </div>
                       <Badge 
                         variant="secondary"
                         className={
-                          object.visits.length > 0 
+                          (object.visits?.length || 0) > 0 
                             ? 'bg-primary/20 text-primary border-primary/30'
                             : 'bg-slate-700/50 text-slate-400 border-slate-600'
                         }
                       >
-                        Актов: {object.visits.length}
+                        {object.objectType === 'installation' ? 'Дней' : 'Актов'}: {object.objectType === 'installation' ? (object.installationDays?.length || 0) : (object.visits?.length || 0)}
                       </Badge>
                     </div>
                     {(object.contactName || object.contactPhone) && (

@@ -36,7 +36,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         <div className="text-center mb-8">
           <div className="mb-6">
             <img 
-              src="https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/6edc3eb5-a2c2-411f-bbf0-b9a85eda81cb.png" 
+              src="https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/06bb4586-6890-42d6-b2d4-7803af50a519.png" 
               alt="PROFIRE - ЮГ" 
               className="mx-auto w-80 h-auto"
             />
