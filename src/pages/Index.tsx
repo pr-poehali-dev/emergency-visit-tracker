@@ -185,6 +185,11 @@ function Index() {
 
   const [objects, setObjects] = useState<SiteObject[]>(getInitialObjects);
 
+  const updateObjects = (newObjects: SiteObject[]) => {
+    setObjects(newObjects);
+    localStorage.setItem('mchs_objects', JSON.stringify(newObjects));
+  };
+
   useEffect(() => {
     localStorage.setItem('mchs_objects', JSON.stringify(objects));
   }, [objects]);
@@ -214,6 +219,10 @@ function Index() {
   };
 
   const handleBackToObjects = () => {
+    const savedObjects = localStorage.getItem('mchs_objects');
+    if (savedObjects) {
+      setObjects(JSON.parse(savedObjects));
+    }
     setSelectedObject(null);
     setCurrentScreen('objects');
   };
@@ -242,8 +251,7 @@ function Index() {
           : obj
       );
 
-      setObjects(updatedObjects);
-      localStorage.setItem('mchs_objects', JSON.stringify(updatedObjects));
+      updateObjects(updatedObjects);
 
       setSelectedObject(prev => 
         prev ? { ...prev, visits: [...prev.visits, newVisit] } : null
@@ -282,8 +290,7 @@ function Index() {
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
             );
-            setObjects(updatedObjects);
-            localStorage.setItem('mchs_objects', JSON.stringify(updatedObjects));
+            updateObjects(updatedObjects);
             setSelectedObject(updatedObject);
           }}
         />
@@ -307,8 +314,7 @@ function Index() {
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
             );
-            setObjects(updatedObjects);
-            localStorage.setItem('mchs_objects', JSON.stringify(updatedObjects));
+            updateObjects(updatedObjects);
             setSelectedObject(updatedObject);
           }}
         />
@@ -323,8 +329,7 @@ function Index() {
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
             );
-            setObjects(updatedObjects);
-            localStorage.setItem('mchs_objects', JSON.stringify(updatedObjects));
+            updateObjects(updatedObjects);
             setSelectedObject(updatedObject);
           }}
         />
@@ -336,7 +341,7 @@ function Index() {
           users={users}
           onBack={handleBackToObjects}
           onUpdateUsers={setUsers}
-          onUpdateObjects={setObjects}
+          onUpdateObjects={updateObjects}
         />
       )}
     </div>
