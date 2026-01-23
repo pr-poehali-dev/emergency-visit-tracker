@@ -12,6 +12,7 @@ export default function SyncTab({ objects }: SyncTabProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string>('');
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline' | null>(null);
 
   const getAllPhotos = () => {
     const photos: { id: string; data: string }[] = [];
@@ -35,6 +36,22 @@ export default function SyncTab({ objects }: SyncTabProps) {
     });
     
     return photos;
+  };
+
+  const checkServerStatus = async () => {
+    setServerStatus('checking');
+    try {
+      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      setServerStatus(response.ok ? 'online' : 'offline');
+      return response.ok;
+    } catch (error) {
+      console.error('Server check error:', error);
+      setServerStatus('offline');
+      return false;
+    }
   };
 
   const downloadBackup = () => {
@@ -101,7 +118,13 @@ export default function SyncTab({ objects }: SyncTabProps) {
     } catch (error: any) {
       const errorMsg = error.message || String(error);
       setSyncStatus(`✗ Ошибка: ${errorMsg}`);
-      console.error('Sync error:', error);
+      console.error('Sync error details:', {
+        error,
+        errorMessage: errorMsg,
+        objectsCount: objects.length,
+        payloadSizeMB: (new Blob([JSON.stringify({ action: 'sync', objects, users: JSON.parse(localStorage.getItem('mchs_users') || '[]') })]).size / (1024 * 1024)).toFixed(2)
+      });
+      alert(`Ошибка синхронизации: ${errorMsg}\n\nПроверьте консоль браузера (F12) для деталей.`);
     } finally {
       setIsSyncing(false);
     }
@@ -193,15 +216,27 @@ export default function SyncTab({ objects }: SyncTabProps) {
               </Button>
             </div>
             
-            <Button 
-              onClick={downloadBackup}
-              disabled={objects.length === 0}
-              variant="outline"
-              className="w-full border-green-600 text-green-300 hover:bg-green-900/20 h-12"
-            >
-              <Icon name="Download" size={18} className="mr-2" />
-              Скачать резервную копию (для безопасности)
-            </Button>
+            <div className="grid md:grid-cols-2 gap-3">
+              <Button 
+                onClick={downloadBackup}
+                disabled={objects.length === 0}
+                variant="outline"
+                className="border-green-600 text-green-300 hover:bg-green-900/20 h-12"
+              >
+                <Icon name="Download" size={18} className="mr-2" />
+                Резервная копия
+              </Button>
+              
+              <Button 
+                onClick={checkServerStatus}
+                disabled={serverStatus === 'checking'}
+                variant="outline"
+                className="border-blue-600 text-blue-300 hover:bg-blue-900/20 h-12"
+              >
+                <Icon name={serverStatus === 'checking' ? 'Loader2' : 'Wifi'} size={18} className={`mr-2 ${serverStatus === 'checking' ? 'animate-spin' : ''}`} />
+                {serverStatus === 'checking' ? 'Проверка...' : serverStatus === 'online' ? 'Сервер доступен' : serverStatus === 'offline' ? 'Сервер недоступен' : 'Проверить сервер'}
+              </Button>
+            </div>
           </div>
 
           {syncStatus && (
