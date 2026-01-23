@@ -12,22 +12,54 @@ interface LoginScreenProps {
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setSyncMessage('');
     
-    const users = localStorage.getItem('mchs_users');
-    if (users) {
-      const usersList = JSON.parse(users);
-      const user = usersList.find((u: any) => u.username === login && u.password === password);
+    try {
+      let users = localStorage.getItem('mchs_users');
       
-      if (user) {
-        onLogin(user.role, user.fullName);
-        return;
+      if (!users) {
+        setSyncMessage('Загрузка данных с сервера...');
+        
+        const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.status === 'success' && result.data) {
+            localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects || []));
+            localStorage.setItem('mchs_users', JSON.stringify(result.data.users || []));
+            users = JSON.stringify(result.data.users || []);
+            setSyncMessage('✓ Данные загружены');
+          }
+        }
       }
+      
+      if (users) {
+        const usersList = JSON.parse(users);
+        const user = usersList.find((u: any) => u.username === login && u.password === password);
+        
+        if (user) {
+          onLogin(user.role, user.fullName);
+          return;
+        }
+      }
+      
+      alert('Неверный логин или пароль');
+    } catch (error) {
+      console.error('Login error:', error);
+      setSyncMessage('✗ Ошибка загрузки данных');
+      alert('Ошибка подключения к серверу. Попробуйте позже.');
+    } finally {
+      setIsLoading(false);
     }
-    
-    alert('Неверный логин или пароль');
   };
 
   return (
@@ -91,14 +123,63 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 </div>
               </div>
 
+              {syncMessage && (
+                <div className={`p-3 rounded-lg text-sm ${
+                  syncMessage.startsWith('✓') 
+                    ? 'bg-green-500/10 border border-green-500/30 text-green-300'
+                    : syncMessage.startsWith('✗')
+                    ? 'bg-red-500/10 border border-red-500/30 text-red-300'
+                    : 'bg-blue-500/10 border border-blue-500/30 text-blue-300'
+                }`}>
+                  {syncMessage}
+                </div>
+              )}
+
               <Button 
                 type="submit" 
+                disabled={isLoading}
                 className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity text-white font-medium h-11"
               >
-                <Icon name="LogIn" size={18} className="mr-2" />
-                Войти
+                <Icon name={isLoading ? "Loader2" : "LogIn"} size={18} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Загрузка...' : 'Войти'}
               </Button>
             </form>
+
+            <div className="mt-4 pt-4 border-t border-slate-700">
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full text-slate-400 hover:text-white hover:bg-slate-800"
+                onClick={async () => {
+                  setIsLoading(true);
+                  setSyncMessage('Синхронизация с сервером...');
+                  try {
+                    const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+                      method: 'GET',
+                      headers: { 'Content-Type': 'application/json' }
+                    });
+                    if (response.ok) {
+                      const result = await response.json();
+                      if (result.status === 'success' && result.data) {
+                        localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects || []));
+                        localStorage.setItem('mchs_users', JSON.stringify(result.data.users || []));
+                        setSyncMessage(`✓ Загружено ${result.data.objects?.length || 0} объектов`);
+                      }
+                    } else {
+                      setSyncMessage('✗ Сервер недоступен');
+                    }
+                  } catch (error) {
+                    setSyncMessage('✗ Ошибка подключения');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                disabled={isLoading}
+              >
+                <Icon name="CloudDownload" size={18} className="mr-2" />
+                Загрузить данные с сервера
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
