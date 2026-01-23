@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
+import { fullSync } from '@/lib/sync';
 import type { SiteObject } from '@/pages/Index';
 
 interface ObjectsListScreenProps {
@@ -27,39 +28,24 @@ export default function ObjectsListScreen({
 
   const handleSync = async () => {
     setIsSyncing(true);
-    setSyncStatus('Загрузка данных с сервера...');
+    setSyncStatus('Синхронизация...');
     
     try {
-      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+      const result = await fullSync(objects, (message) => {
+        setSyncStatus(message);
       });
-
-      if (!response.ok) {
-        throw new Error('Сервер недоступен');
-      }
-
-      const result = await response.json();
       
-      if (result.status === 'success' && result.data) {
-        const serverObjects = result.data.objects || [];
-        setSyncStatus(`✓ Загружено ${serverObjects.length} объектов с сервера`);
-        
-        localStorage.setItem('mchs_objects', JSON.stringify(serverObjects));
-        localStorage.setItem('mchs_users', JSON.stringify(result.data.users || []));
-        localStorage.setItem('mchs_last_sync', new Date().toISOString());
-        
+      if (result.success) {
+        setSyncStatus(`✓ ${result.message}`);
         setTimeout(() => {
           window.location.reload();
         }, 1500);
       } else {
-        throw new Error('Нет данных на сервере');
+        setSyncStatus(`✗ ${result.message}`);
+        setTimeout(() => setSyncStatus(''), 5000);
       }
     } catch (error: any) {
-      setSyncStatus(`✗ ${error.message || 'Ошибка загрузки'}`);
-      console.error('Sync error:', error);
+      setSyncStatus(`✗ Ошибка: ${error.message}`);
       setTimeout(() => setSyncStatus(''), 5000);
     } finally {
       setIsSyncing(false);

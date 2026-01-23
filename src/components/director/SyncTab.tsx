@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
+import { uploadToServer, downloadFromServer } from '@/lib/sync';
 import type { SiteObject } from '@/pages/Index';
 
 interface SyncTabProps {
@@ -77,61 +78,24 @@ export default function SyncTab({ objects }: SyncTabProps) {
     setSyncStatus('Подготовка данных...');
     
     try {
-      const totalObjects = objects.length;
-      let uploadedPhotos = 0;
+      const result = await uploadToServer(objects, (current, total, message) => {
+        setSyncStatus(message);
+      });
       
-      for (let i = 0; i < totalObjects; i++) {
-        const obj = objects[i];
-        const progress = Math.round(((i + 1) / totalObjects) * 100);
+      if (result.success) {
+        setSyncStatus(`✓ ${result.message}`);
+        setLastSync(new Date().toLocaleString('ru-RU'));
         
-        const payloadStr = JSON.stringify({
-          action: 'sync',
-          objects: [obj],
-          users: []
-        });
-        const sizeMB = (payloadStr.length / (1024 * 1024)).toFixed(2);
-        
-        setSyncStatus(`Отправка ${i + 1} из ${totalObjects} (${progress}%) • ${sizeMB} МБ`);
-        
-        const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: payloadStr
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP ${response.status} на объекте "${obj.name}": ${errorText.slice(0, 100)}`);
-        }
-
-        const result = await response.json();
-        
-        if (result.status !== 'success') {
-          throw new Error(`Объект "${obj.name}": ${result.error || 'Неизвестная ошибка'}`);
-        }
-        
-        uploadedPhotos += result.uploaded_photos || 0;
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        throw new Error(result.message);
       }
-      
-      setSyncStatus(`✓ Синхронизировано ${totalObjects} объектов, загружено ${uploadedPhotos} фото/видео`);
-      setLastSync(new Date().toLocaleString('ru-RU'));
-      localStorage.setItem('mchs_last_sync', new Date().toISOString());
-      
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
     } catch (error: any) {
       const errorMsg = error.message || String(error);
       setSyncStatus(`✗ Ошибка: ${errorMsg}`);
-      console.error('Sync error details:', {
-        error,
-        errorMessage: errorMsg,
-        objectsCount: objects.length
-      });
+      console.error('Sync error:', error);
       alert(`Ошибка синхронизации: ${errorMsg}\n\nПопробуйте:\n1. Скачать резервную копию\n2. Уменьшить размер фото/видео\n3. Связаться с поддержкой`);
     } finally {
       setIsSyncing(false);
@@ -143,24 +107,15 @@ export default function SyncTab({ objects }: SyncTabProps) {
     setSyncStatus('Загрузка данных с сервера...');
     
     try {
-      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const result = await response.json();
+      const result = await downloadFromServer();
       
-      if (result.status === 'success') {
-        setSyncStatus(`✓ Загружено ${result.data.objects.length} объектов с сервера`);
-        localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects));
-        
+      if (result.success) {
+        setSyncStatus(`✓ ${result.message}`);
         setTimeout(() => {
           window.location.reload();
         }, 1500);
       } else {
-        setSyncStatus('✗ Ошибка загрузки');
+        setSyncStatus(`✗ ${result.message}`);
       }
     } catch (error) {
       setSyncStatus('✗ Ошибка подключения к серверу');

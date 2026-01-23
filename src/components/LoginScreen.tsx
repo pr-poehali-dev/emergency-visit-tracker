@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
+import { downloadFromServer } from '@/lib/sync';
 
 interface LoginScreenProps {
   onLogin: (role: 'technician' | 'director', name: string) => void;
@@ -25,20 +26,11 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       
       if (!users) {
         setSyncMessage('Загрузка данных с сервера...');
+        const result = await downloadFromServer();
         
-        const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.status === 'success' && result.data) {
-            localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects || []));
-            localStorage.setItem('mchs_users', JSON.stringify(result.data.users || []));
-            users = JSON.stringify(result.data.users || []);
-            setSyncMessage('✓ Данные загружены');
-          }
+        if (result.success) {
+          users = localStorage.getItem('mchs_users');
+          setSyncMessage('✓ Данные загружены');
         }
       }
       
@@ -154,19 +146,11 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   setIsLoading(true);
                   setSyncMessage('Синхронизация с сервером...');
                   try {
-                    const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-                      method: 'GET',
-                      headers: { 'Content-Type': 'application/json' }
-                    });
-                    if (response.ok) {
-                      const result = await response.json();
-                      if (result.status === 'success' && result.data) {
-                        localStorage.setItem('mchs_objects', JSON.stringify(result.data.objects || []));
-                        localStorage.setItem('mchs_users', JSON.stringify(result.data.users || []));
-                        setSyncMessage(`✓ Загружено ${result.data.objects?.length || 0} объектов`);
-                      }
+                    const result = await downloadFromServer();
+                    if (result.success) {
+                      setSyncMessage(`✓ ${result.message}`);
                     } else {
-                      setSyncMessage('✗ Сервер недоступен');
+                      setSyncMessage(`✗ ${result.message}`);
                     }
                   } catch (error) {
                     setSyncMessage('✗ Ошибка подключения');
