@@ -34,10 +34,13 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-secondary mb-4 shadow-lg shadow-primary/20">
-            <Icon name="Shield" size={40} className="text-white" />
+          <div className="mb-4">
+            <img 
+              src="https://i.imgur.com/uiVXwD0.png" 
+              alt="МЧС Учёт" 
+              className="mx-auto w-64 h-auto"
+            />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">МЧС Учёт</h1>
           <p className="text-slate-300">Система учёта посещений объектов</p>
         </div>
 
