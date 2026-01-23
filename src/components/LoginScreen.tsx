@@ -34,11 +34,11 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <div className="mb-4">
+          <div className="mb-6">
             <img 
-              src="https://i.imgur.com/uiVXwD0.png" 
-              alt="МЧС Учёт" 
-              className="mx-auto w-64 h-auto"
+              src="https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/403b7a7c-d1f3-4d52-b704-84b5f7faacf9.jpg" 
+              alt="PROFIRE - ЮГ" 
+              className="mx-auto w-80 h-auto"
             />
           </div>
           <p className="text-slate-300">Система учёта посещений объектов</p>
