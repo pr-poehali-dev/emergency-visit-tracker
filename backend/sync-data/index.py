@@ -98,6 +98,8 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             
             if action == 'sync':
                 local_objects = body.get('objects', [])
+                local_users = body.get('users', [])
+                is_first_batch = len(local_users) > 0
                 
                 try:
                     response = s3.get_object(Bucket=bucket, Key=data_key)
@@ -107,7 +109,10 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                     server_objects = []
                     server_data = {'objects': [], 'users': []}
                 
-                merged_objects = merge_objects(server_objects, local_objects)
+                if is_first_batch:
+                    merged_objects = copy.deepcopy(local_objects)
+                else:
+                    merged_objects = merge_objects(server_objects, local_objects)
                 
                 uploaded_files = []
                 for obj in merged_objects:
@@ -126,8 +131,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                                     visit['photos'][i] = cdn_url
                                     uploaded_files.append(file_key)
                 
-                local_users = body.get('users', [])
-                if local_users:
+                if is_first_batch:
                     updated_data = {
                         'objects': merged_objects,
                         'users': local_users
@@ -200,40 +204,48 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
 
 
 def merge_objects(server_objects: List[Dict], local_objects: List[Dict]) -> List[Dict]:
-    """Объединяет объекты с сервера и локальные, решая конфликты по времени"""
+    """Объединяет объекты с сервера и локальные. Локальные объекты имеют приоритет."""
     
-    objects_dict = {}
+    local_ids = {obj['id'] for obj in local_objects}
+    server_dict = {obj['id']: copy.deepcopy(obj) for obj in server_objects}
     
-    for obj in server_objects:
-        objects_dict[obj['id']] = copy.deepcopy(obj)
+    result = []
     
     for local_obj in local_objects:
         obj_id = local_obj['id']
         
-        if obj_id not in objects_dict:
-            objects_dict[obj_id] = local_obj
-        else:
-            server_obj = objects_dict[obj_id]
+        if obj_id in server_dict:
+            server_obj = server_dict[obj_id]
             
             server_obj['name'] = local_obj.get('name', server_obj.get('name'))
             server_obj['address'] = local_obj.get('address', server_obj.get('address'))
+            server_obj['description'] = local_obj.get('description', server_obj.get('description'))
             server_obj['contactName'] = local_obj.get('contactName', server_obj.get('contactName'))
             server_obj['contactPhone'] = local_obj.get('contactPhone', server_obj.get('contactPhone'))
+            server_obj['objectType'] = local_obj.get('objectType', server_obj.get('objectType'))
             
             if local_obj.get('objectPhoto'):
                 server_obj['objectPhoto'] = local_obj['objectPhoto']
             
             server_visits = {v['id']: v for v in server_obj.get('visits', [])}
+            local_visits = {v['id']: v for v in local_obj.get('visits', [])}
             
-            for local_visit in local_obj.get('visits', []):
-                visit_id = local_visit['id']
-                
-                if visit_id not in server_visits:
-                    server_visits[visit_id] = local_visit
+            for visit_id, local_visit in local_visits.items():
+                server_visits[visit_id] = local_visit
             
             all_visits = list(server_visits.values())
             all_visits.sort(key=lambda v: v.get('createdAt', ''))
-            
             server_obj['visits'] = all_visits
+            
+            if local_obj.get('installationDays'):
+                server_obj['installationDays'] = local_obj['installationDays']
+            
+            result.append(server_obj)
+        else:
+            result.append(copy.deepcopy(local_obj))
     
-    return list(objects_dict.values())
+    for server_obj in server_objects:
+        if server_obj['id'] not in local_ids:
+            result.append(copy.deepcopy(server_obj))
+    
+    return result
