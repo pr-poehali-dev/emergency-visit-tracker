@@ -302,14 +302,25 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                     visit_id = str(visit['id'])
                     is_deleted = visit.get('deleted', False)
                     
-                    # Пропускаем удалённые визиты при создании
-                    if is_deleted:
-                        print(f"Skipping deleted visit {visit_id}")
-                    
                     cursor.execute('''
                         SELECT id FROM t_p32730230_emergency_visit_trac.visits_v2 WHERE id = %s
                     ''', (visit_id,))
                     visit_exists = cursor.fetchone()
+                    
+                    # Если визит помечен как удалённый и уже существует в БД - обновляем is_archived
+                    if is_deleted and visit_exists:
+                        print(f"Marking visit {visit_id} as archived")
+                        cursor.execute('''
+                            UPDATE t_p32730230_emergency_visit_trac.visits_v2
+                            SET is_archived = TRUE
+                            WHERE id = %s
+                        ''', (visit_id,))
+                        continue
+                    
+                    # Пропускаем создание удалённых визитов
+                    if is_deleted and not visit_exists:
+                        print(f"Skipping creation of deleted visit {visit_id}")
+                        continue
                     
                     if not visit_exists:
                         # Создаём новый визит с флагом is_archived если он помечен deleted
