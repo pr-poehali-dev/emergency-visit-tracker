@@ -135,34 +135,37 @@ function Index() {
   // АВТОЗАГРУЗКА данных с сервера при первом запуске
   useEffect(() => {
     const autoLoad = async () => {
-      const hasData = localStorage.getItem('mchs_objects');
-      if (!hasData || hasData === '[]') {
-        console.log('🔄 Автозагрузка данных с сервера...');
-        try {
-          const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-            method: 'GET',
-            mode: 'cors',
-            credentials: 'omit',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            if (result.status === 'success' && result.data) {
-              const serverObjects = result.data.objects || [];
-              const serverUsers = result.data.users || [];
-              
-              console.log('✅ Загружено с сервера:', serverObjects.length, 'объектов');
+      console.log('🔄 Автозагрузка данных с сервера...');
+      try {
+        const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+          method: 'GET',
+          mode: 'cors',
+          credentials: 'omit',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.status === 'success' && result.data) {
+            const serverObjects = result.data.objects || [];
+            const serverUsers = result.data.users || [];
+            
+            console.log('✅ Загружено с сервера:', serverObjects.length, 'объектов');
+            
+            // Если на сервере есть данные - используем их
+            if (serverObjects.length > 0) {
               setObjects(serverObjects);
               setUsers(serverUsers);
               
               localStorage.setItem('mchs_objects', JSON.stringify(serverObjects));
               localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
+            } else {
+              console.log('⚠️ На сервере нет данных, используем локальные если есть');
             }
           }
-        } catch (error) {
-          console.error('❌ Ошибка автозагрузки:', error);
         }
+      } catch (error) {
+        console.error('❌ Ошибка автозагрузки:', error);
       }
     };
     
