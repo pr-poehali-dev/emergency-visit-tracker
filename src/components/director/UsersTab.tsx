@@ -41,7 +41,11 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
       createdAt: new Date().toISOString()
     };
 
-    onUpdateUsers([...users, user]);
+    console.log('🆕 Creating new user:', user);
+    console.log('📋 Current users:', users.length);
+    const updatedUsers = [...users, user];
+    console.log('📋 Updated users list:', updatedUsers.length, updatedUsers);
+    onUpdateUsers(updatedUsers);
     setNewUser({ username: '', password: '', fullName: '', phone: '', role: 'technician' });
     setIsAddingUser(false);
   };

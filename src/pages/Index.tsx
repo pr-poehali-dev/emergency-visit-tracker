@@ -119,22 +119,25 @@ function Index() {
   const [users, setUsers] = useState<User[]>(getInitialUsers);
 
   const updateUsers = async (newUsers: User[]) => {
-    console.log('✅ updateUsers called with:', newUsers.length, 'users');
+    console.log('✅ updateUsers called with:', newUsers.length, 'users', newUsers);
     setUsers(newUsers);
     
     // Сохраняем на сервер автоматически
     try {
       console.log('🔄 Сохранение пользователей на сервер...');
+      const payload = {
+        action: 'sync',
+        objects: [],
+        users: newUsers
+      };
+      console.log('📤 Sending payload:', JSON.stringify(payload));
+      
       const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
         method: 'POST',
         mode: 'cors',
         credentials: 'omit',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'sync',
-          objects: [],
-          users: newUsers
-        })
+        body: JSON.stringify(payload)
       });
       
       if (response.ok) {

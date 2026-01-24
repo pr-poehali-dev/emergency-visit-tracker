@@ -22,18 +22,19 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     setSyncMessage('');
     
     try {
-      let users = localStorage.getItem('mchs_users');
+      // ВСЕГДА загружаем актуальных пользователей с сервера при авторизации
+      setSyncMessage('Проверка данных на сервере...');
+      const result = await downloadFromServer();
       
-      if (!users) {
-        setSyncMessage('Загрузка данных с сервера...');
-        const result = await downloadFromServer();
-        
-        if (result.success) {
-          users = localStorage.getItem('mchs_users');
-          setSyncMessage('✓ Данные загружены');
-        }
+      if (!result.success) {
+        setSyncMessage('✗ Ошибка подключения к серверу');
+        alert('Не удалось подключиться к серверу. Попробуйте позже.');
+        return;
       }
       
+      setSyncMessage('✓ Данные загружены');
+      
+      const users = localStorage.getItem('mchs_users');
       if (users) {
         const usersList = JSON.parse(users);
         const user = usersList.find((u: any) => u.username === login && u.password === password);
