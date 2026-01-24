@@ -261,11 +261,13 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 exists = cursor.fetchone()
                 
                 if exists:
+                    # Проверяем флаг deleted - если true, помечаем как архивный
+                    is_deleted = obj.get('deleted', False)
                     cursor.execute('''
                         UPDATE t_p32730230_emergency_visit_trac.objects_v2
                         SET name = %s, address = %s, object_photo = %s, description = %s,
                             contact_name = %s, contact_phone = %s, object_type = %s,
-                            updated_at = CURRENT_TIMESTAMP
+                            is_archived = %s, updated_at = CURRENT_TIMESTAMP
                         WHERE id = %s
                     ''', (
                         obj['name'], 
@@ -275,6 +277,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                         obj.get('contactName'),
                         obj.get('contactPhone'),
                         obj.get('objectType'),
+                        is_deleted,
                         obj_id
                     ))
                 else:
