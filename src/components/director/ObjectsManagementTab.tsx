@@ -74,7 +74,7 @@ export default function ObjectsManagementTab({ objects, onUpdateObjects }: Objec
 
   const handleDeleteObject = (objectId: string) => {
     if (confirm('Вы уверены, что хотите удалить этот объект? Будут удалены все акты посещений.')) {
-      onUpdateObjects(objects.filter(obj => obj.id !== objectId));
+      onUpdateObjects(objects.map(obj => obj.id === objectId ? { ...obj, deleted: true } : obj));
     }
   };
 
@@ -203,7 +203,7 @@ export default function ObjectsManagementTab({ objects, onUpdateObjects }: Objec
       )}
 
       <div className="space-y-3">
-        {objects.map((object) => (
+        {objects.filter(obj => !obj.deleted).map((object) => (
           <Card key={object.id} className="border-slate-700 bg-slate-800/50 backdrop-blur-sm">
             <CardContent className="p-4">
               {editingObject?.id === object.id ? (

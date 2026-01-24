@@ -22,19 +22,21 @@ interface DirectorPanelProps {
 export default function DirectorPanel({ objects, users, onBack, onUpdateUsers, onUpdateObjects }: DirectorPanelProps) {
   const [selectedTab, setSelectedTab] = useState('export');
 
-  const totalVisits = objects.reduce((sum, obj) => sum + obj.visits.length, 0);
-  const plannedVisits = objects.reduce(
+  const activeObjects = objects.filter(obj => !obj.deleted);
+
+  const totalVisits = activeObjects.reduce((sum, obj) => sum + obj.visits.length, 0);
+  const plannedVisits = activeObjects.reduce(
     (sum, obj) => sum + obj.visits.filter(v => v.type === 'planned').length, 
     0
   );
   const unplannedVisits = totalVisits - plannedVisits;
 
   const userStats = users.map(user => {
-    const userVisits = objects.reduce((count, obj) => {
+    const userVisits = activeObjects.reduce((count, obj) => {
       return count + obj.visits.filter(v => v.createdBy === user.fullName).length;
     }, 0);
     
-    const userObjects = objects.filter(obj => 
+    const userObjects = activeObjects.filter(obj => 
       obj.visits.some(v => v.createdBy === user.fullName)
     ).length;
 
@@ -75,7 +77,7 @@ export default function DirectorPanel({ objects, users, onBack, onUpdateUsers, o
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-400 mb-1">Объектов</p>
-                    <p className="text-2xl font-bold text-white">{objects.length}</p>
+                    <p className="text-2xl font-bold text-white">{activeObjects.length}</p>
                   </div>
                   <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
                     <Icon name="Building2" size={20} className="text-primary" />

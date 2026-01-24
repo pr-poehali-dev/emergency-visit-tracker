@@ -64,7 +64,9 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
         try:
             response = s3.get_object(Bucket=bucket, Key=data_key)
             data = json.loads(response['Body'].read().decode('utf-8'))
-            print(f"GET: Returning {len(data.get('objects', []))} objects, {len(data.get('users', []))} users")
+            
+            active_objects = [obj for obj in data.get('objects', []) if not obj.get('deleted')]
+            print(f"GET: Returning {len(active_objects)} active objects (filtered {len(data.get('objects', [])) - len(active_objects)} deleted), {len(data.get('users', []))} users")
             
             return {
                 'statusCode': 200,
@@ -74,7 +76,10 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 },
                 'body': json.dumps({
                     'status': 'success',
-                    'data': data
+                    'data': {
+                        'objects': active_objects,
+                        'users': data.get('users', [])
+                    }
                 }),
                 'isBase64Encoded': False
             }
@@ -211,17 +216,21 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
 def merge_objects(server_objects: List[Dict], local_objects: List[Dict]) -> List[Dict]:
     """Объединяет объекты с сервера и локальные. Локальные объекты имеют приоритет."""
     
-    local_ids = {obj['id'] for obj in local_objects}
+    local_dict = {obj['id']: obj for obj in local_objects}
     server_dict = {obj['id']: copy.deepcopy(obj) for obj in server_objects}
     
     result = []
+    all_ids = set(local_dict.keys()) | set(server_dict.keys())
     
-    for local_obj in local_objects:
-        obj_id = local_obj['id']
+    for obj_id in all_ids:
+        local_obj = local_dict.get(obj_id)
+        server_obj = server_dict.get(obj_id)
         
-        if obj_id in server_dict:
-            server_obj = server_dict[obj_id]
-            
+        if local_obj and local_obj.get('deleted'):
+            result.append(copy.deepcopy(local_obj))
+            continue
+        
+        if local_obj and server_obj:
             server_obj['name'] = local_obj.get('name', server_obj.get('name'))
             server_obj['address'] = local_obj.get('address', server_obj.get('address'))
             server_obj['description'] = local_obj.get('description', server_obj.get('description'))
@@ -246,11 +255,9 @@ def merge_objects(server_objects: List[Dict], local_objects: List[Dict]) -> List
                 server_obj['installationDays'] = local_obj['installationDays']
             
             result.append(server_obj)
-        else:
+        elif local_obj:
             result.append(copy.deepcopy(local_obj))
-    
-    for server_obj in server_objects:
-        if server_obj['id'] not in local_ids:
+        elif server_obj and not server_obj.get('deleted'):
             result.append(copy.deepcopy(server_obj))
     
     return result

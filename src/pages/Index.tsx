@@ -44,6 +44,7 @@ export interface SiteObject {
   objectType?: 'regular' | 'installation';
   visits: Visit[];
   installationDays?: InstallationDay[];
+  deleted?: boolean;
 }
 
 export interface InstallationDay {

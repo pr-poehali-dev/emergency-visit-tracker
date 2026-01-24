@@ -13,8 +13,10 @@ export default function ExportTab({ objects }: ExportTabProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportStatus, setExportStatus] = useState<string>('');
 
-  const totalVisits = objects.reduce((sum, obj) => sum + obj.visits.length, 0);
-  const totalPhotos = objects.reduce((sum, obj) => 
+  const activeObjects = objects.filter(obj => !obj.deleted);
+  
+  const totalVisits = activeObjects.reduce((sum, obj) => sum + obj.visits.length, 0);
+  const totalPhotos = activeObjects.reduce((sum, obj) => 
     sum + obj.visits.reduce((s, v) => s + v.photos.length, 0), 0
   );
 
@@ -25,7 +27,7 @@ export default function ExportTab({ objects }: ExportTabProps) {
     try {
       const zip = new JSZip();
 
-      for (const obj of objects) {
+      for (const obj of activeObjects) {
         const objectFolder = zip.folder(obj.name);
         if (!objectFolder) continue;
 

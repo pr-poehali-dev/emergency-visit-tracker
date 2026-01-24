@@ -31,7 +31,7 @@ export default function SmsStatsTab({ objects }: SmsStatsTabProps) {
     const objectCounts: Record<string, number> = {};
     const recentMessages: { date: string; object: string; recipients: number }[] = [];
 
-    objects.forEach(obj => {
+    objects.filter(obj => !obj.deleted).forEach(obj => {
       obj.visits.forEach(visit => {
         if (visit.smsNotifications && visit.smsNotifications.length > 0) {
           const visitDate = new Date(visit.date);

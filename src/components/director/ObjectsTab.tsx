@@ -13,7 +13,7 @@ export default function ObjectsTab({ objects }: ObjectsTabProps) {
         <CardContent className="p-6">
           <h2 className="text-xl font-semibold text-white mb-4">Объекты под контролем</h2>
           <div className="space-y-3">
-            {objects.map((obj) => (
+            {objects.filter(obj => !obj.deleted).map((obj) => (
               <div 
                 key={obj.id}
                 className="flex items-center justify-between p-4 rounded-lg bg-slate-900/50 border border-slate-700"

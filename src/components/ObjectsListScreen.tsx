@@ -53,8 +53,9 @@ export default function ObjectsListScreen({
   };
 
   const filteredObjects = objects.filter(obj => 
-    obj.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    obj.address.toLowerCase().includes(searchQuery.toLowerCase())
+    !obj.deleted &&
+    (obj.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    obj.address.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
