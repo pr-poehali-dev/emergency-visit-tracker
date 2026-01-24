@@ -1,15 +1,17 @@
-const CACHE_NAME = 'mchs-visits-v1';
+const CACHE_NAME = 'mchs-visits-v2';
 const urlsToCache = [
   '/',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
+      .then((cache) => {
+        return cache.addAll(urlsToCache).catch((error) => {
+          console.error('Cache addAll failed:', error);
+        });
+      })
   );
   self.skipWaiting();
 });
@@ -30,6 +32,20 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // НЕ кэшируем внешние API и функции
+  if (url.origin !== location.origin) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+  
+  // НЕ кэшируем data: и blob: URLs
+  if (url.protocol === 'data:' || url.protocol === 'blob:') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -50,6 +66,9 @@ self.addEventListener('fetch', (event) => {
             });
           
           return response;
+        }).catch(() => {
+          // Если офлайн - возвращаем базовую страницу из кэша
+          return caches.match('/');
         });
       })
   );
