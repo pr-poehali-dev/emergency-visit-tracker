@@ -127,64 +127,47 @@ function Index() {
     if (saved) {
       return JSON.parse(saved);
     }
-    return [
-      {
-        id: '1',
-        name: 'ТЦ "Галерея"',
-        address: 'ул. Ленина, 45',
-        visits: [
-          {
-            id: '1',
-            date: '2026-01-20',
-            type: 'planned',
-            comment: 'Проверка системы пожаротушения, все работает исправно. Датчики в норме.',
-            photos: ['https://placehold.co/600x400/0EA5E9/fff?text=Система+пожаротушения'],
-            createdBy: 'Иванов И.И.',
-            createdAt: '2026-01-20T10:30:00'
-          },
-          {
-            id: '2',
-            date: '2026-01-15',
-            type: 'unplanned',
-            comment: 'Срочный выезд по заявке клиента. Замена датчика дыма.',
-            photos: ['https://placehold.co/600x400/8B5CF6/fff?text=Датчик+дыма'],
-            createdBy: 'Петров П.П.',
-            createdAt: '2026-01-15T14:20:00'
-          }
-        ]
-      },
-      {
-        id: '2',
-        name: 'Офисный центр "Сити"',
-        address: 'пр. Мира, 12',
-        visits: [
-          {
-            id: '3',
-            date: '2026-01-18',
-            type: 'planned',
-            comment: 'Плановое техническое обслуживание систем безопасности',
-            photos: ['https://placehold.co/600x400/F97316/fff?text=ТО+систем'],
-            createdBy: 'Сидоров С.С.',
-            createdAt: '2026-01-18T09:00:00'
-          }
-        ]
-      },
-      {
-        id: '3',
-        name: 'Склад "Логистик+"',
-        address: 'ул. Промышленная, 8',
-        visits: []
-      },
-      {
-        id: '4',
-        name: 'Бизнес-центр "Альфа"',
-        address: 'ул. Гагарина, 23',
-        visits: []
-      }
-    ];
+    return [];
   };
 
   const [objects, setObjects] = useState<SiteObject[]>(getInitialObjects);
+
+  // АВТОЗАГРУЗКА данных с сервера при первом запуске
+  useEffect(() => {
+    const autoLoad = async () => {
+      const hasData = localStorage.getItem('mchs_objects');
+      if (!hasData || hasData === '[]') {
+        console.log('🔄 Автозагрузка данных с сервера...');
+        try {
+          const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'omit',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.status === 'success' && result.data) {
+              const serverObjects = result.data.objects || [];
+              const serverUsers = result.data.users || [];
+              
+              console.log('✅ Загружено с сервера:', serverObjects.length, 'объектов');
+              setObjects(serverObjects);
+              setUsers(serverUsers);
+              
+              localStorage.setItem('mchs_objects', JSON.stringify(serverObjects));
+              localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
+            }
+          }
+        } catch (error) {
+          console.error('❌ Ошибка автозагрузки:', error);
+        }
+      }
+    };
+    
+    autoLoad();
+  }, []);
 
   const updateObjects = (newObjects: SiteObject[]) => {
     console.log('✅ updateObjects called with:', newObjects.length, 'objects');
