@@ -81,27 +81,79 @@ export default function ObjectHistoryScreen({
     }
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Файл слишком большой. Максимум 10 МБ.');
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Файл слишком большой. Максимум 20 МБ.');
       e.target.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setTaskPhotos([...taskPhotos, base64]);
-      e.target.value = '';
-    };
-    reader.onerror = () => {
+    try {
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            const maxSize = 1920;
+            if (width > maxSize || height > maxSize) {
+              if (width > height) {
+                height = (height / width) * maxSize;
+                width = maxSize;
+              } else {
+                width = (width / height) * maxSize;
+                height = maxSize;
+              }
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              throw new Error('Canvas context not available');
+            }
+            
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+            setTaskPhotos([...taskPhotos, compressedBase64]);
+            e.target.value = '';
+          } catch (error) {
+            console.error('Image compression error:', error);
+            setTaskPhotos([...taskPhotos, base64]);
+            e.target.value = '';
+          }
+        };
+        
+        img.onerror = () => {
+          alert('Ошибка обработки изображения');
+          e.target.value = '';
+        };
+        
+        img.src = base64;
+      };
+
+      reader.onerror = () => {
+        alert('Ошибка загрузки фото');
+        e.target.value = '';
+      };
+
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Photo upload error:', error);
       alert('Ошибка загрузки фото');
       e.target.value = '';
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -364,7 +416,7 @@ export default function ObjectHistoryScreen({
                             onChange={handlePhotoUpload}
                             className="w-full bg-slate-800 border border-slate-600 text-white rounded-md file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-green-600 file:text-white file:cursor-pointer hover:file:bg-green-700"
                           />
-                          <p className="text-xs text-slate-500 mt-1">Максимум 10 МБ на фото</p>
+                          <p className="text-xs text-slate-500 mt-1">Фото будет автоматически сжато для быстрой отправки</p>
                           {taskPhotos.length > 0 && (
                             <div className="grid grid-cols-3 gap-2 mt-3">
                               {taskPhotos.map((photo, idx) => (
