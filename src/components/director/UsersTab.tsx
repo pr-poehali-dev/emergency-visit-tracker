@@ -45,9 +45,12 @@ export default function UsersTab({ users, onUpdateUsers }: UsersTabProps) {
     console.log('📋 Current users:', users.length);
     const updatedUsers = [...users, user];
     console.log('📋 Updated users list:', updatedUsers.length, updatedUsers);
+    console.log('🔄 Calling onUpdateUsers...');
     onUpdateUsers(updatedUsers);
+    console.log('✅ onUpdateUsers called successfully');
     setNewUser({ username: '', password: '', fullName: '', phone: '', role: 'technician' });
     setIsAddingUser(false);
+    alert(`Пользователь ${user.fullName} создан! Проверьте консоль (F12) для логов`);
   };
 
   const handleUpdateUser = () => {

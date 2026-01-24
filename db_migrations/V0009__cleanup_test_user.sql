@@ -1,0 +1,1 @@
+UPDATE t_p32730230_emergency_visit_trac.users SET role = 'technician' WHERE username = 'test123' AND id = 6
