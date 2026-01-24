@@ -4,6 +4,26 @@
 
 const SYNC_URL = 'https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a';
 
+// Тест доступности функции
+async function testConnection(): Promise<boolean> {
+  try {
+    console.log('🔍 Testing connection to:', SYNC_URL);
+    const response = await fetch(SYNC_URL, {
+      method: 'OPTIONS',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': window.location.origin
+      }
+    });
+    console.log('✅ OPTIONS response:', response.status);
+    return response.ok || response.status === 200;
+  } catch (error) {
+    console.error('❌ Connection test failed:', error);
+    return false;
+  }
+}
+
 export interface SyncResult {
   success: boolean;
   message: string;
@@ -16,10 +36,14 @@ export interface SyncResult {
  */
 export async function downloadFromServer(): Promise<SyncResult> {
   try {
+    console.log('📥 Downloading from server...');
     const response = await fetch(SYNC_URL, {
       method: 'GET',
+      mode: 'cors',
+      credentials: 'omit',
       headers: { 'Content-Type': 'application/json' }
     });
+    console.log('📥 Download response:', response.status);
 
     if (!response.ok) {
       return {
@@ -89,6 +113,17 @@ export async function uploadToServer(
 ): Promise<SyncResult> {
   try {
     console.log('🚀 uploadToServer started with', objects.length, 'objects');
+    
+    // ТЕСТ ПОДКЛЮЧЕНИЯ
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      return {
+        success: false,
+        message: 'Не удалось подключиться к серверу. Проверьте интернет.',
+        error: 'Connection test failed'
+      };
+    }
+    
     const totalObjects = objects.length;
     let uploadedPhotos = 0;
     
@@ -113,7 +148,10 @@ export async function uploadToServer(
       const response = await fetch(SYNC_URL, {
         method: 'POST',
         mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'omit',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
         body: requestBody
       });
       
