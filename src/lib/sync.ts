@@ -16,25 +16,34 @@ export interface SyncResult {
  */
 export async function downloadFromServer(): Promise<SyncResult> {
   try {
+    console.log('Download: Starting fetch from', SYNC_URL);
     const response = await fetch(SYNC_URL, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
 
+    console.log('Download: Response status', response.status);
+
     if (!response.ok) {
+      console.error('Download: Response not OK', response.status, response.statusText);
       return {
         success: false,
-        message: 'Сервер недоступен',
-        error: `HTTP ${response.status}`
+        message: `Сервер вернул ошибку: ${response.status}`,
+        error: `HTTP ${response.status}: ${response.statusText}`
       };
     }
 
-    const result = await response.json();
+    const text = await response.text();
+    console.log('Download: Response text length', text.length);
+    
+    const result = JSON.parse(text);
+    console.log('Download: Parsed result', result.status, result.data);
     
     if (result.status === 'success' && result.data) {
       const objects = result.data.objects || [];
       const users = result.data.users || [];
       
+      console.log('Download: Saving to localStorage', objects.length, 'objects', users.length, 'users');
       localStorage.setItem('mchs_objects', JSON.stringify(objects));
       localStorage.setItem('mchs_users', JSON.stringify(users));
       localStorage.setItem('mchs_last_sync', new Date().toISOString());
@@ -46,15 +55,17 @@ export async function downloadFromServer(): Promise<SyncResult> {
       };
     }
     
+    console.error('Download: Invalid response format', result);
     return {
       success: false,
-      message: 'Нет данных на сервере',
-      error: 'Empty response'
+      message: 'Неверный формат ответа сервера',
+      error: 'Invalid response format'
     };
   } catch (error: any) {
+    console.error('Download: Exception', error);
     return {
       success: false,
-      message: 'Ошибка подключения',
+      message: `Ошибка: ${error.message}`,
       error: error.message
     };
   }
