@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Восстановление данных PROFIRE-ЮГ</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #7e22ce 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+        .status.info {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        .status.success {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        .status.error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        button {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .progress {
+            margin: 20px 0;
+        }
+        .progress-bar {
+            background: rgba(100, 100, 100, 0.3);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .log {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+        .log-line {
+            margin: 5px 0;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Восстановление данных</h1>
+        <p style="color: #94a3b8; margin-top: 5px;">PROFIRE-ЮГ - Система учёта посещений</p>
+
+        <div id="status" class="status info">
+            Готов восстановить <strong>17 объектов</strong> на сервер
+        </div>
+
+        <div class="progress" id="progress" style="display: none;">
+            <div style="margin-bottom: 8px; font-size: 14px;" id="progress-text">Подготовка...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <button id="restore-btn" onclick="restoreData()">
+            Восстановить данные
+        </button>
+
+        <div class="log" id="log" style="display: none;"></div>
+    </div>
+
+    <script>
+        const BACKUP_DATA = {
+  "objects": [
+    {
+      "id": "1769205199754",
+      "name": "Стоматология (ГАУЗ «Стоматологическая поликлиника № 2» МЗ КК)",
+      "address": "г. Краснодар, ул. Гидростроителей, 38, ул. Гидростроителей, 34",
+      "description": "Адресная СПС, СОУЭ на базе БОЛИД",
+      "contactName": "Владимир (завхоз)",
+      "contactPhone": "+79964058700",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769205199754.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769205080402",
+      "name": "(ООО «Образовательная Инфраструктура» (жилой дом)",
+      "address": "г. Усть-Лабинск, ул. Октябрьская, 66Б ",
+      "description": "Адресная СПС, СОУЭ на базе ЮНИТРОНИК",
+      "contactName": "Евгений (инженер слаботочник)",
+      "contactPhone": "+79183130609",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769205080402.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769204864477",
+      "name": "ООО «Образовательная Инфраструктура» (МЕДЦЕНТР)",
+      "address": "г. Усть-Лабинск, ул. Им. Марии Овсянниковой, 1А",
+      "description": "Адресная СПС, СОУЭ, СПДЗ на РУБЕЖ",
+      "contactName": "Евгений (инженер слаботочник)",
+      "contactPhone": "+79183130609",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769204864477.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769204541153",
+      "name": "ООО «Образовательная Инфраструктура» (Лицей)",
+      "address": "г. Усть-Лабинск, ул. Им. Марии Овсянниковой, 20",
+      "description": "Адресная СПС и СОУЭ, СПДЗ, ВПВ на РУБЕЖ",
+      "contactName": "Евгений (инженер слаботочных систем)",
+      "contactPhone": "+79183130609",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769204541153.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769204400934",
+      "name": "АО СЗ \"ОБД\"",
+      "address": "г. Краснодар, ул. Тихорецкая 20",
+      "description": "Адресная/аналоговая СПС на базе Болид.",
+      "contactName": "Есин Сергей Сергеевич",
+      "contactPhone": "+79298255977",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769204400934.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769204291811",
+      "name": "Магазин \"Ангел\" ООО «Эксельсиор Фешн Групп»",
+      "address": "г. Краснодар, Центральный внутригородской округ, ул. Гоголя 69.",
+      "description": "Адресная/радиоканальная СПС, СОУЭ октава, ВПВ, СПДЗ",
+      "contactName": "Владимир (эксплуатация)",
+      "contactPhone": "+79183260134",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769204291811.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769204126090",
+      "name": "ООО \"Юг+развитие\" Отель \"Легенда\"",
+      "address": "ул. имени Марии Овсянниковой, 9, Усть-Лабинск",
+      "description": "Адресная СПС, СОУЭ, ВПВ, АУПТ, АУГПТ, СПДЗ на Болиде",
+      "contactName": "Евгений (главный инженер)",
+      "contactPhone": "+79687760679",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769204126090.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769203941691",
+      "name": "ООО \"АРТ САЙД\"",
+      "address": "г. Краснодар, Зиповская улица, 5ВлитЦ",
+      "description": "Старые аналоговые система на базе ГРАНИТ",
+      "contactName": "Артем",
+      "contactPhone": "+79064348526",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769203941691.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769203831112",
+      "name": "Добрый ЮГ",
+      "address": "г. Краснодар,  ул. Октябрьская 131.",
+      "description": "Адресная СПС на Болиде",
+      "contactName": "Руднева Дана",
+      "contactPhone": "+79883399663",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769203831112.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769203735587",
+      "name": "Добрый ЮГ",
+      "address": "пр-кт Чекистов, д. 10",
+      "description": "Старая аналоговая система",
+      "contactName": "Дана Руднева",
+      "contactPhone": "+79883399663",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769203735587.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769203620196",
+      "name": "ТЦ \"Восточно-Кругликовский\" (ИП Крапивный М.М.)",
+      "address": "г. Краснодар, ул. Восточно-Кругликовская, д 46/11",
+      "description": "Старая адресная СПС на БОЛИДЕ. ДУ и ПД",
+      "contactName": "Виктория",
+      "contactPhone": "+79182153866",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769203620196.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769203459510",
+      "name": "Магазин \"Триал-Спорт\" ( ООО \"ЧЕЛЕСТЕ)",
+      "address": "г. Краснодар, ул. Онежская, д. 3.",
+      "description": "Аналоговая СПС на базе ГРАНИТ, ВПВ на базе БОЛИД",
+      "contactName": "Мухин Сергей Сергеевич",
+      "contactPhone": "+79615806822",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769203459510.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769203250724",
+      "name": "Юг Тренд Авто ( ИП Науменко В.В.)",
+      "address": "г. Краснодар, Е. Бершанской, 351/3",
+      "description": "На всем объекте смонтирована адресная система на БОЛИД. Управляет всем СИРИУС на КПП.",
+      "contactName": "Вадим",
+      "contactPhone": "+79184824784",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769203250724.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769202864470",
+      "name": "Пиццерия «Тутто Пицца (ООО \"РЕКОЛЬТ\")",
+      "address": "ул. Восточно-Кругликовская 18 ",
+      "description": "Автономная адресная СПС и СОУЭ на БОЛИД",
+      "contactName": "Екатерина Управляющий",
+      "contactPhone": "+79282461910",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769202864470.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769202684781",
+      "name": "ООО \"Калининский водоканал\"",
+      "address": "г. Краснодар, ул. Лесопарковая 11.",
+      "description": "Аналоговая СПС и СОУЭ на базе БОЛИД",
+      "contactName": "Галина Петровна Директор",
+      "contactPhone": "+79034500090",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769202684781.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769202498861",
+      "name": "ООО \"Рекольт\" (кафе «Сезон»)",
+      "address": "г. Краснодар, ул. Архитектора Ишунина 3 ",
+      "description": "Адресная автономная СПС и СОУЭ на Болиде",
+      "contactName": "Екатерина",
+      "contactPhone": "+79282461910",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769202498861.jpg",
+      "objectType": "regular",
+      "visits": []
+    },
+    {
+      "id": "1769202128650",
+      "name": "Ресторан \"Атмосфера\"",
+      "address": "г. Усть-Лабинск, ул. Октябрьская, 66 Б",
+      "description": "Ресторан является частью общей системы дома. Выделены разделы под него. Системы: СПС, СОУЭ. Система \"Юнитроник\"",
+      "contactName": "Игорь Управляющий",
+      "contactPhone": "+79180896169",
+      "objectPhoto": "https://cdn.poehali.dev/projects/01f36c76-3df1-4720-9a9a-9dfe8734a6fe/bucket/profire_data/photos/obj_1769202128650.jpg",
+      "objectType": "regular",
+      "visits": []
+    }
+  ],
+  "users": [
+    {
+      "id": "1",
+      "username": "director",
+      "password": "director",
+      "fullName": "Директор",
+      "role": "director",
+      "createdAt": "2026-01-23T16:06:05.886Z"
+    },
+    {
+      "id": "2",
+      "username": "tech",
+      "password": "tech",
+      "fullName": "Техник",
+      "role": "technician",
+      "createdAt": "2026-01-23T16:06:05.886Z",
+      "phone": "+79673038193"
+    }
+  ]
+};
+
+        const SYNC_URL = 'https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a';
+
+        function log(message) {
+            const logEl = document.getElementById('log');
+            logEl.style.display = 'block';
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.appendChild(line);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateProgress(current, total, message) {
+            const progress = Math.round((current / total) * 100);
+            document.getElementById('progress-fill').style.width = progress + '%';
+            document.getElementById('progress-text').textContent = `${message} (${current}/${total})`;
+        }
+
+        async function restoreData() {
+            const btn = document.getElementById('restore-btn');
+            const status = document.getElementById('status');
+            const progress = document.getElementById('progress');
+
+            btn.disabled = true;
+            progress.style.display = 'block';
+            
+            try {
+                log('Начало восстановления данных...');
+                status.className = 'status info';
+                status.innerHTML = 'Восстановление в процессе...';
+
+                const objects = BACKUP_DATA.objects;
+                const users = BACKUP_DATA.users;
+                
+                // Отправляем первый объект с users (first_batch)
+                log(`Отправка первого объекта с данными пользователей...`);
+                updateProgress(0, objects.length, 'Инициализация');
+
+                const firstResponse = await fetch(SYNC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'sync',
+                        objects: [objects[0]],
+                        users: users
+                    })
+                });
+
+                if (!firstResponse.ok) {
+                    throw new Error(`HTTP ${firstResponse.status}`);
+                }
+
+                const firstResult = await firstResponse.json();
+                if (firstResult.status !== 'success') {
+                    throw new Error(firstResult.error || 'Ошибка первого запроса');
+                }
+
+                log(`✓ Первый объект загружен: ${objects[0].name}`);
+                updateProgress(1, objects.length, 'Загрузка объектов');
+
+                // Остальные объекты без users
+                for (let i = 1; i < objects.length; i++) {
+                    const obj = objects[i];
+                    log(`Отправка объекта ${i + 1}/${objects.length}: ${obj.name}`);
+                    
+                    const response = await fetch(SYNC_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'sync',
+                            objects: [obj],
+                            users: []
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status} на объекте "${obj.name}"`);
+                    }
+
+                    const result = await response.json();
+                    if (result.status !== 'success') {
+                        throw new Error(`Объект "${obj.name}": ${result.error}`);
+                    }
+
+                    log(`✓ Объект ${i + 1} загружен: ${obj.name}`);
+                    updateProgress(i + 1, objects.length, 'Загрузка объектов');
+
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                status.className = 'status success';
+                status.innerHTML = `<strong>✓ Успешно восстановлено ${objects.length} объектов!</strong><br>Данные загружены на сервер.`;
+                log('=== ВОССТАНОВЛЕНИЕ ЗАВЕРШЕНО УСПЕШНО ===');
+                
+                btn.textContent = 'Готово!';
+                
+            } catch (error) {
+                log(`✗ ОШИБКА: ${error.message}`);
+                status.className = 'status error';
+                status.innerHTML = `<strong>Ошибка восстановления:</strong><br>${error.message}`;
+                btn.disabled = false;
+                btn.textContent = 'Попробовать снова';
+            }
+        }
+    </script>
+</body>
+</html>
