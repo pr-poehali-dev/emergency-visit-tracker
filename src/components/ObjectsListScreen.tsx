@@ -59,8 +59,8 @@ export default function ObjectsListScreen({
       obj.address.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .sort((a, b) => {
-      const aHasTasks = a.visits.some(v => v.type === 'task' && !v.taskCompleted);
-      const bHasTasks = b.visits.some(v => v.type === 'task' && !v.taskCompleted);
+      const aHasTasks = a.visits?.some(v => v.type === 'task' && !v.taskCompleted) || false;
+      const bHasTasks = b.visits?.some(v => v.type === 'task' && !v.taskCompleted) || false;
       
       if (aHasTasks && !bHasTasks) return -1;
       if (!aHasTasks && bHasTasks) return 1;
