@@ -210,7 +210,10 @@ export default function ObjectHistoryScreen({
   };
 
   const handleDeleteVisit = async (visitId: string) => {
-    const updatedVisits = object.visits.filter(v => v.id !== visitId);
+    // Помечаем визит как удалённый вместо реального удаления
+    const updatedVisits = object.visits.map(v => 
+      v.id === visitId ? { ...v, deleted: true } : v
+    );
     await onUpdateObject({ ...object, visits: updatedVisits });
     setEditingVisit(null);
   };
@@ -246,7 +249,7 @@ export default function ObjectHistoryScreen({
             onCreateTask={onCreateTask}
           />
 
-          {object.visits.length === 0 ? (
+          {object.visits.filter(v => !v.deleted).length === 0 ? (
             <div className="text-center py-16">
               <div className="w-20 h-20 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-4">
                 <Icon name="FileText" size={40} className="text-slate-500" />
@@ -266,7 +269,7 @@ export default function ObjectHistoryScreen({
               <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-secondary to-accent"></div>
               
               <div className="space-y-6">
-                {object.visits.map((visit, index) => (
+                {object.visits.filter(v => !v.deleted).map((visit, index) => (
                   <VisitCard
                     key={visit.id}
                     visit={visit}

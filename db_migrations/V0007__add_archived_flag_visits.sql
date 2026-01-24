@@ -1,0 +1,1 @@
+ALTER TABLE t_p32730230_emergency_visit_trac.visits_v2 ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE

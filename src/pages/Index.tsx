@@ -31,6 +31,7 @@ export interface Visit {
   taskCompletedBy?: string;
   taskCompletedAt?: string;
   smsNotifications?: SmsNotification[];
+  deleted?: boolean;
 }
 
 export interface SiteObject {

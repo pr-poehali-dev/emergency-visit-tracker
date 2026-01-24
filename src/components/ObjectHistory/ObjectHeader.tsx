@@ -56,7 +56,7 @@ export default function ObjectHeader({
             Добавить посещение
           </Button>
           
-          {userRole === 'director' && (
+          {(userRole === 'director' || userRole === 'supervisor') && (
             <Button 
               variant="outline"
               onClick={onCreateTask}

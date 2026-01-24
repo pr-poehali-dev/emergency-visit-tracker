@@ -69,11 +69,12 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             ''')
             objects_rows = cursor.fetchall() or []
             
-            # Получаем визиты
+            # Получаем визиты (только неархивные)
             cursor.execute('''
                 SELECT id, object_id, visit_date, visit_type, comment, created_by, created_at, is_locked,
                        task_description, task_completed, task_completed_by, task_completed_at
                 FROM t_p32730230_emergency_visit_trac.visits_v2
+                WHERE is_archived IS NULL OR is_archived = FALSE
                 ORDER BY object_id, visit_date DESC
             ''')
             visits_rows = cursor.fetchall()
@@ -326,16 +327,19 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                             visit.get('taskCompletedAt')
                         ))
                     else:
-                        # Обновляем визит если он уже существует (для завершения задач)
+                        # Обновляем визит если он уже существует (для завершения задач и удаления)
+                        is_deleted = visit.get('deleted', False)
                         cursor.execute('''
                             UPDATE t_p32730230_emergency_visit_trac.visits_v2
-                            SET comment = %s, task_completed = %s, task_completed_by = %s, task_completed_at = %s
+                            SET comment = %s, task_completed = %s, task_completed_by = %s, 
+                                task_completed_at = %s, is_archived = %s
                             WHERE id = %s
                         ''', (
                             visit.get('comment', ''),
                             visit.get('taskCompleted'),
                             visit.get('taskCompletedBy'),
                             visit.get('taskCompletedAt'),
+                            is_deleted,
                             visit_id
                         ))
                     
