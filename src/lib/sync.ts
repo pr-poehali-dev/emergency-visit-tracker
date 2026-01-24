@@ -90,13 +90,13 @@ export async function uploadToServer(
       });
 
       if (!response.ok) {
-        throw new Error(`Ошибка на объекте "${obj.name}": HTTP ${response.status}`);
+        throw new Error(`Ошибка на объекте "${obj.name || 'без имени'}": HTTP ${response.status}`);
       }
 
       const result = await response.json();
       
       if (result.status !== 'success') {
-        throw new Error(`Объект "${obj.name}": ${result.error || 'Ошибка'}`);
+        throw new Error(`Объект "${obj.name || 'без имени'}": ${result.error || 'Ошибка'}`);
       }
       
       uploadedPhotos += result.uploaded_photos || 0;

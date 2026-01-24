@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
-import { uploadToServer, downloadFromServer } from '@/lib/sync';
+import { uploadToServer, downloadFromServer, fullSync } from '@/lib/sync';
 import type { SiteObject } from '@/pages/Index';
 
 interface SyncTabProps {
@@ -77,7 +77,7 @@ export default function SyncTab({ objects }: SyncTabProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!confirm('Восстановление из резервной копии загрузит данные на сервер. Продолжить?')) {
+    if (!confirm('Восстановление из резервной копии загрузит данные на сервер и объединит их с существующими. Продолжить?')) {
       e.target.value = '';
       return;
     }
@@ -93,9 +93,9 @@ export default function SyncTab({ objects }: SyncTabProps) {
         throw new Error('Некорректный формат файла');
       }
 
-      setSyncStatus(`Найдено ${backup.objects.length} объектов. Загрузка на сервер...`);
+      setSyncStatus(`Найдено ${backup.objects.length} объектов. Синхронизация...`);
 
-      const result = await uploadToServer(backup.objects, (current, total, message) => {
+      const result = await fullSync(backup.objects, (message) => {
         setSyncStatus(message);
       });
 
@@ -109,15 +109,16 @@ export default function SyncTab({ objects }: SyncTabProps) {
         
         setTimeout(() => {
           window.location.reload();
-        }, 2000);
+        }, 1500);
       } else {
-        throw new Error(result.message);
+        setSyncStatus(`✗ ${result.message}`);
+        setTimeout(() => setSyncStatus(''), 5000);
       }
     } catch (error: any) {
       const errorMsg = error.message || String(error);
       setSyncStatus(`✗ Ошибка: ${errorMsg}`);
       console.error('Restore error:', error);
-      alert(`Ошибка восстановления: ${errorMsg}`);
+      setTimeout(() => setSyncStatus(''), 5000);
     } finally {
       setIsSyncing(false);
       e.target.value = '';
@@ -126,10 +127,10 @@ export default function SyncTab({ objects }: SyncTabProps) {
 
   const handleSync = async () => {
     setIsSyncing(true);
-    setSyncStatus('Подготовка данных...');
+    setSyncStatus('Синхронизация...');
     
     try {
-      const result = await uploadToServer(objects, (current, total, message) => {
+      const result = await fullSync(objects, (message) => {
         setSyncStatus(message);
       });
       
@@ -139,15 +140,16 @@ export default function SyncTab({ objects }: SyncTabProps) {
         
         setTimeout(() => {
           window.location.reload();
-        }, 2000);
+        }, 1500);
       } else {
-        throw new Error(result.message);
+        setSyncStatus(`✗ ${result.message}`);
+        setTimeout(() => setSyncStatus(''), 5000);
       }
     } catch (error: any) {
       const errorMsg = error.message || String(error);
       setSyncStatus(`✗ Ошибка: ${errorMsg}`);
       console.error('Sync error:', error);
-      alert(`Ошибка синхронизации: ${errorMsg}\n\nПопробуйте:\n1. Скачать резервную копию\n2. Уменьшить размер фото/видео\n3. Связаться с поддержкой`);
+      setTimeout(() => setSyncStatus(''), 5000);
     } finally {
       setIsSyncing(false);
     }

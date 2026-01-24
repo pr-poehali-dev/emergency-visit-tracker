@@ -230,6 +230,10 @@ def merge_objects(server_objects: List[Dict], local_objects: List[Dict]) -> List
             result.append(copy.deepcopy(local_obj))
             continue
         
+        if server_obj and server_obj.get('deleted'):
+            result.append(copy.deepcopy(server_obj))
+            continue
+        
         if local_obj and server_obj:
             merged_obj = copy.deepcopy(local_obj)
             
@@ -245,7 +249,7 @@ def merge_objects(server_objects: List[Dict], local_objects: List[Dict]) -> List
             result.append(merged_obj)
         elif local_obj:
             result.append(copy.deepcopy(local_obj))
-        elif server_obj and not server_obj.get('deleted'):
+        elif server_obj:
             result.append(copy.deepcopy(server_obj))
     
     return result
