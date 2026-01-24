@@ -302,19 +302,24 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                     visit_id = str(visit['id'])
                     is_deleted = visit.get('deleted', False)
                     
+                    print(f"Processing visit {visit_id}: deleted={is_deleted}")
+                    
                     cursor.execute('''
                         SELECT id FROM t_p32730230_emergency_visit_trac.visits_v2 WHERE id = %s
                     ''', (visit_id,))
                     visit_exists = cursor.fetchone()
                     
+                    print(f"Visit {visit_id} exists in DB: {visit_exists is not None}")
+                    
                     # Если визит помечен как удалённый и уже существует в БД - обновляем is_archived
                     if is_deleted and visit_exists:
-                        print(f"Marking visit {visit_id} as archived")
+                        print(f"✅ Marking visit {visit_id} as archived (deleted=True, exists=True)")
                         cursor.execute('''
                             UPDATE t_p32730230_emergency_visit_trac.visits_v2
                             SET is_archived = TRUE
                             WHERE id = %s
                         ''', (visit_id,))
+                        print(f"✅ Visit {visit_id} marked as archived")
                         continue
                     
                     # Пропускаем создание удалённых визитов
