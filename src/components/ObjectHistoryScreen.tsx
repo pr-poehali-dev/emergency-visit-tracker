@@ -28,6 +28,7 @@ export default function ObjectHistoryScreen({
   const [editingVisit, setEditingVisit] = useState<string | null>(null);
   const [taskComment, setTaskComment] = useState('');
   const [taskPhotos, setTaskPhotos] = useState<string[]>([]);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -40,7 +41,7 @@ export default function ObjectHistoryScreen({
     }).format(date);
   };
 
-  const handleCompleteTask = (visitId: string) => {
+  const handleCompleteTask = async (visitId: string) => {
     if (!taskComment.trim()) {
       alert('Добавьте комментарий к выполненной задаче');
       return;
@@ -50,23 +51,34 @@ export default function ObjectHistoryScreen({
       return;
     }
 
-    const updatedVisits = object.visits.map(v => 
-      v.id === visitId 
-        ? { 
-            ...v, 
-            comment: taskComment,
-            photos: taskPhotos,
-            taskCompleted: true,
-            taskCompletedBy: userName,
-            taskCompletedAt: new Date().toISOString()
-          } 
-        : v
-    );
+    setIsCompleting(true);
 
-    onUpdateObject({ ...object, visits: updatedVisits });
-    setEditingVisit(null);
-    setTaskComment('');
-    setTaskPhotos([]);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const updatedVisits = object.visits.map(v => 
+        v.id === visitId 
+          ? { 
+              ...v, 
+              comment: taskComment,
+              photos: taskPhotos,
+              taskCompleted: true,
+              taskCompletedBy: userName,
+              taskCompletedAt: new Date().toISOString()
+            } 
+          : v
+      );
+
+      onUpdateObject({ ...object, visits: updatedVisits });
+      setEditingVisit(null);
+      setTaskComment('');
+      setTaskPhotos([]);
+    } catch (error) {
+      console.error('Complete task error:', error);
+      alert('Ошибка завершения задачи. Попробуйте ещё раз.');
+    } finally {
+      setIsCompleting(false);
+    }
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -373,10 +385,20 @@ export default function ObjectHistoryScreen({
                         <div className="flex gap-2">
                           <Button
                             onClick={() => handleCompleteTask(visit.id)}
-                            className="flex-1 bg-green-600 hover:bg-green-700"
+                            disabled={isCompleting}
+                            className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50"
                           >
-                            <Icon name="Check" size={16} className="mr-2" />
-                            Завершить задачу
+                            {isCompleting ? (
+                              <>
+                                <Icon name="Loader2" size={16} className="mr-2 animate-spin" />
+                                Сохранение...
+                              </>
+                            ) : (
+                              <>
+                                <Icon name="Check" size={16} className="mr-2" />
+                                Завершить задачу
+                              </>
+                            )}
                           </Button>
                           <Button
                             variant="outline"
@@ -385,7 +407,8 @@ export default function ObjectHistoryScreen({
                               setTaskComment('');
                               setTaskPhotos([]);
                             }}
-                            className="border-slate-600 text-slate-300"
+                            disabled={isCompleting}
+                            className="border-slate-600 text-slate-300 disabled:opacity-50"
                           >
                             Отмена
                           </Button>
