@@ -51,33 +51,27 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             'isBase64Encoded': False
         }
     
-    s3 = boto3.client('s3',
-        endpoint_url='https://bucket.poehali.dev',
-        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
-        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
-    )
-    
-    bucket = 'files'
-    photos_prefix = 'mchs_photos/'
-    
     # GET - получить все данные из БД
     if method == 'GET':
         try:
+            print('GET: Starting database connection...')
             conn = get_db_connection()
             cursor = conn.cursor()
+            print('GET: Connection successful')
             
             # Получаем объекты
             cursor.execute('''
                 SELECT id, name, address, created_at, updated_at
-                FROM t_p32730230_emergency_visit_trac.objects
+                FROM t_p32730230_emergency_visit_trac.objects_v2
+                WHERE is_archived IS NULL OR is_archived = FALSE
                 ORDER BY id
             ''')
-            objects_rows = cursor.fetchall()
+            objects_rows = cursor.fetchall() or []
             
             # Получаем визиты
             cursor.execute('''
                 SELECT id, object_id, visit_date, visit_type, comment, created_by, created_at, is_locked
-                FROM t_p32730230_emergency_visit_trac.visits
+                FROM t_p32730230_emergency_visit_trac.visits_v2
                 ORDER BY object_id, visit_date DESC
             ''')
             visits_rows = cursor.fetchall()
@@ -85,17 +79,13 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             # Получаем фото
             cursor.execute('''
                 SELECT visit_id, photo_url
-                FROM t_p32730230_emergency_visit_trac.photos
+                FROM t_p32730230_emergency_visit_trac.photos_v2
                 ORDER BY visit_id
             ''')
             photos_rows = cursor.fetchall()
             
-            # Получаем пользователей
-            cursor.execute('''
-                SELECT id, username, full_name, phone, role, created_at
-                FROM t_p32730230_emergency_visit_trac.users
-            ''')
-            users_rows = cursor.fetchall()
+            # Пользователи пока не нужны для синхронизации
+            users_rows = []
             
             cursor.close()
             conn.close()
@@ -138,17 +128,25 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                     'objectType': 'regular'
                 })
             
-            # Собираем пользователей
-            users = []
-            for user_row in users_rows:
-                users.append({
-                    'id': str(user_row[0]),
-                    'username': user_row[1],
-                    'fullName': user_row[2],
-                    'phone': user_row[3] or '',
-                    'role': user_row[4],
-                    'createdAt': user_row[5].isoformat() if user_row[5] else ''
-                })
+            # Пользователи для совместимости (пока хардкод)
+            users = [
+                {
+                    'id': '1',
+                    'username': 'director',
+                    'fullName': 'Директор',
+                    'phone': '',
+                    'role': 'director',
+                    'createdAt': '2024-01-01T00:00:00'
+                },
+                {
+                    'id': '2',
+                    'username': 'tech',
+                    'fullName': 'Техник',
+                    'phone': '',
+                    'role': 'technician',
+                    'createdAt': '2024-01-01T00:00:00'
+                }
+            ]
             
             print(f"GET: Returning {len(objects)} objects, {len(users)} users")
             
@@ -169,7 +167,9 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             }
             
         except Exception as e:
+            import traceback
             print(f"GET error: {e}")
+            print(f"GET error traceback: {traceback.format_exc()}")
             return {
                 'statusCode': 500,
                 'headers': {
@@ -204,6 +204,15 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             
             print(f"SYNC: Received {len(local_objects)} objects, {len(local_users)} users")
             
+            # Инициализация S3 клиента для загрузки фото
+            s3 = boto3.client('s3',
+                endpoint_url='https://bucket.poehali.dev',
+                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+            )
+            bucket = 'files'
+            photos_prefix = 'mchs_photos/'
+            
             conn = get_db_connection()
             cursor = conn.cursor()
             
@@ -212,7 +221,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             
             # Сохраняем объекты
             for obj in local_objects:
-                obj_id = int(obj['id'])
+                obj_id = str(obj['id'])
                 
                 # Загружаем фото объекта в S3 если это base64
                 if obj.get('objectPhoto') and obj['objectPhoto'].startswith('data:'):
@@ -223,34 +232,34 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 
                 # Проверяем существование объекта
                 cursor.execute('''
-                    SELECT id FROM t_p32730230_emergency_visit_trac.objects WHERE id = %s
+                    SELECT id FROM t_p32730230_emergency_visit_trac.objects_v2 WHERE id = %s
                 ''', (obj_id,))
                 exists = cursor.fetchone()
                 
                 if exists:
                     cursor.execute('''
-                        UPDATE t_p32730230_emergency_visit_trac.objects
+                        UPDATE t_p32730230_emergency_visit_trac.objects_v2
                         SET name = %s, address = %s, updated_at = CURRENT_TIMESTAMP
                         WHERE id = %s
                     ''', (obj['name'], obj['address'], obj_id))
                 else:
                     cursor.execute('''
-                        INSERT INTO t_p32730230_emergency_visit_trac.objects (id, name, address)
+                        INSERT INTO t_p32730230_emergency_visit_trac.objects_v2 (id, name, address)
                         VALUES (%s, %s, %s)
                     ''', (obj_id, obj['name'], obj['address']))
                 
                 # Сохраняем визиты
                 for visit in obj.get('visits', []):
-                    visit_id = int(visit['id'])
+                    visit_id = str(visit['id'])
                     
                     cursor.execute('''
-                        SELECT id FROM t_p32730230_emergency_visit_trac.visits WHERE id = %s
+                        SELECT id FROM t_p32730230_emergency_visit_trac.visits_v2 WHERE id = %s
                     ''', (visit_id,))
                     visit_exists = cursor.fetchone()
                     
                     if not visit_exists:
                         cursor.execute('''
-                            INSERT INTO t_p32730230_emergency_visit_trac.visits 
+                            INSERT INTO t_p32730230_emergency_visit_trac.visits_v2 
                             (id, object_id, user_id, visit_date, visit_type, comment, created_by, is_locked)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                         ''', (
@@ -274,14 +283,14 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                         
                         # Проверяем существование фото
                         cursor.execute('''
-                            SELECT photo_url FROM t_p32730230_emergency_visit_trac.photos 
+                            SELECT photo_url FROM t_p32730230_emergency_visit_trac.photos_v2 
                             WHERE visit_id = %s AND photo_url = %s
                         ''', (visit_id, photo))
                         photo_exists = cursor.fetchone()
                         
                         if not photo_exists and photo:
                             cursor.execute('''
-                                INSERT INTO t_p32730230_emergency_visit_trac.photos (visit_id, photo_url)
+                                INSERT INTO t_p32730230_emergency_visit_trac.photos_v2 (visit_id, photo_url)
                                 VALUES (%s, %s)
                             ''', (visit_id, photo))
                 
