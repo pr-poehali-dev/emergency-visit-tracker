@@ -93,7 +93,7 @@ export default function VisitCard({
             </p>
           </div>
 
-          {userRole === 'director' ? (
+          {(userRole === 'director' || userRole === 'supervisor') ? (
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -152,7 +152,7 @@ export default function VisitCard({
                     </div>
                   </>
                 )}
-                {editingVisit === visit.id && userRole === 'director' && (
+                {(userRole === 'director' || userRole === 'supervisor') && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -242,7 +242,7 @@ export default function VisitCard({
           </div>
         )}
 
-        {editingVisit === visit.id && userRole === 'director' && (
+        {editingVisit === visit.id && (userRole === 'director' || userRole === 'supervisor') && (
           <div className="mt-4 flex gap-2">
             <Button
               variant="destructive"

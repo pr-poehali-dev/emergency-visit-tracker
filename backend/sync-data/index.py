@@ -300,6 +300,11 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 # Сохраняем визиты
                 for visit in obj.get('visits', []):
                     visit_id = str(visit['id'])
+                    is_deleted = visit.get('deleted', False)
+                    
+                    # Пропускаем удалённые визиты при создании
+                    if is_deleted:
+                        print(f"Skipping deleted visit {visit_id}")
                     
                     cursor.execute('''
                         SELECT id FROM t_p32730230_emergency_visit_trac.visits_v2 WHERE id = %s
@@ -307,11 +312,12 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                     visit_exists = cursor.fetchone()
                     
                     if not visit_exists:
+                        # Создаём новый визит с флагом is_archived если он помечен deleted
                         cursor.execute('''
                             INSERT INTO t_p32730230_emergency_visit_trac.visits_v2 
                             (id, object_id, user_id, visit_date, visit_type, comment, created_by, created_at, is_locked,
-                             task_description, task_completed, task_completed_by, task_completed_at)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, %s, %s, %s, %s, %s)
+                             task_description, task_completed, task_completed_by, task_completed_at, is_archived)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, %s, %s, %s, %s, %s, %s)
                         ''', (
                             visit_id,
                             obj_id,
@@ -324,7 +330,8 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                             visit.get('taskDescription'),
                             visit.get('taskCompleted'),
                             visit.get('taskCompletedBy'),
-                            visit.get('taskCompletedAt')
+                            visit.get('taskCompletedAt'),
+                            is_deleted
                         ))
                     else:
                         # Обновляем визит если он уже существует (для завершения задач и удаления)
