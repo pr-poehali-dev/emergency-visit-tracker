@@ -187,12 +187,23 @@ function Index() {
   const [objects, setObjects] = useState<SiteObject[]>(getInitialObjects);
 
   const updateObjects = (newObjects: SiteObject[]) => {
+    console.log('updateObjects called with:', newObjects.length, 'objects');
     setObjects(newObjects);
-    localStorage.setItem('mchs_objects', JSON.stringify(newObjects));
+    try {
+      localStorage.setItem('mchs_objects', JSON.stringify(newObjects));
+      console.log('LocalStorage updated successfully');
+    } catch (error) {
+      console.error('LocalStorage save error:', error);
+      alert('⚠️ Ошибка сохранения данных. Возможно LocalStorage переполнен.');
+    }
   };
 
   useEffect(() => {
-    localStorage.setItem('mchs_objects', JSON.stringify(objects));
+    try {
+      localStorage.setItem('mchs_objects', JSON.stringify(objects));
+    } catch (error) {
+      console.error('LocalStorage save error:', error);
+    }
   }, [objects]);
 
   const handleLogin = (role: UserRole, name: string) => {
@@ -288,11 +299,14 @@ function Index() {
           onCreateVisit={handleCreateVisit}
           onCreateTask={handleCreateTask}
           onUpdateObject={(updatedObject) => {
+            console.log('ObjectHistoryScreen onUpdateObject called with:', updatedObject);
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
             );
+            console.log('Calling updateObjects with updated list');
             updateObjects(updatedObjects);
             setSelectedObject(updatedObject);
+            console.log('setSelectedObject called with updated object');
           }}
         />
       )}

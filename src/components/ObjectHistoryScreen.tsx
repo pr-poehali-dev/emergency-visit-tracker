@@ -42,7 +42,7 @@ export default function ObjectHistoryScreen({
     }).format(date);
   };
 
-  const handleCompleteTask = async (visitId: string) => {
+  const handleCompleteTask = (visitId: string) => {
     if (!taskComment.trim()) {
       alert('Добавьте комментарий к выполненной задаче');
       return;
@@ -55,8 +55,8 @@ export default function ObjectHistoryScreen({
     setIsCompleting(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
-
+      console.log('Completing task:', visitId, 'with comment:', taskComment, 'photos:', taskPhotos.length);
+      
       const updatedVisits = object.visits.map(v => 
         v.id === visitId 
           ? { 
@@ -70,7 +70,12 @@ export default function ObjectHistoryScreen({
           : v
       );
 
-      onUpdateObject({ ...object, visits: updatedVisits });
+      const updatedObject = { ...object, visits: updatedVisits };
+      console.log('Updated object:', updatedObject);
+      
+      onUpdateObject(updatedObject);
+      console.log('onUpdateObject called successfully');
+      
       setEditingVisit(null);
       setTaskComment('');
       setTaskPhotos([]);
