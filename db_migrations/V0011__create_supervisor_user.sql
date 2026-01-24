@@ -1,0 +1,1 @@
+INSERT INTO t_p32730230_emergency_visit_trac.users (username, password_hash, full_name, role, phone) VALUES ('supervisor', 'supervisor', 'Руководитель Тест', 'supervisor', '+7 999 222-33-44')

@@ -1,0 +1,2 @@
+ALTER TABLE t_p32730230_emergency_visit_trac.users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE t_p32730230_emergency_visit_trac.users ADD CONSTRAINT users_role_check CHECK (role IN ('technician', 'director', 'supervisor'))
