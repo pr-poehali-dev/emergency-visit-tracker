@@ -231,30 +231,18 @@ def merge_objects(server_objects: List[Dict], local_objects: List[Dict]) -> List
             continue
         
         if local_obj and server_obj:
-            server_obj['name'] = local_obj.get('name', server_obj.get('name'))
-            server_obj['address'] = local_obj.get('address', server_obj.get('address'))
-            server_obj['description'] = local_obj.get('description', server_obj.get('description'))
-            server_obj['contactName'] = local_obj.get('contactName', server_obj.get('contactName'))
-            server_obj['contactPhone'] = local_obj.get('contactPhone', server_obj.get('contactPhone'))
-            server_obj['objectType'] = local_obj.get('objectType', server_obj.get('objectType'))
+            merged_obj = copy.deepcopy(local_obj)
             
-            if local_obj.get('objectPhoto'):
-                server_obj['objectPhoto'] = local_obj['objectPhoto']
+            local_visit_ids = {v['id'] for v in local_obj.get('visits', [])}
+            server_visits = server_obj.get('visits', [])
             
-            server_visits = {v['id']: v for v in server_obj.get('visits', [])}
-            local_visits = {v['id']: v for v in local_obj.get('visits', [])}
+            for server_visit in server_visits:
+                if server_visit['id'] not in local_visit_ids:
+                    merged_obj['visits'].append(server_visit)
             
-            for visit_id, local_visit in local_visits.items():
-                server_visits[visit_id] = local_visit
+            merged_obj['visits'].sort(key=lambda v: v.get('createdAt', ''))
             
-            all_visits = list(server_visits.values())
-            all_visits.sort(key=lambda v: v.get('createdAt', ''))
-            server_obj['visits'] = all_visits
-            
-            if local_obj.get('installationDays'):
-                server_obj['installationDays'] = local_obj['installationDays']
-            
-            result.append(server_obj)
+            result.append(merged_obj)
         elif local_obj:
             result.append(copy.deepcopy(local_obj))
         elif server_obj and not server_obj.get('deleted'):
