@@ -187,14 +187,21 @@ function Index() {
   const [objects, setObjects] = useState<SiteObject[]>(getInitialObjects);
 
   const updateObjects = (newObjects: SiteObject[]) => {
-    console.log('updateObjects called with:', newObjects.length, 'objects');
+    console.log('✅ updateObjects called with:', newObjects.length, 'objects');
     setObjects(newObjects);
     try {
-      localStorage.setItem('mchs_objects', JSON.stringify(newObjects));
-      console.log('LocalStorage updated successfully');
+      const dataString = JSON.stringify(newObjects);
+      const sizeKB = (dataString.length / 1024).toFixed(2);
+      console.log('📦 Data size:', sizeKB, 'KB');
+      localStorage.setItem('mchs_objects', dataString);
+      console.log('✅ LocalStorage updated successfully');
     } catch (error) {
-      console.error('LocalStorage save error:', error);
-      alert('⚠️ Ошибка сохранения данных. Возможно LocalStorage переполнен.');
+      console.error('❌ LocalStorage save error:', error);
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        alert('❌ LocalStorage переполнен! Удалите старые фото.');
+      } else {
+        alert('❌ Ошибка сохранения: ' + (error instanceof Error ? error.message : 'Unknown'));
+      }
     }
   };
 
