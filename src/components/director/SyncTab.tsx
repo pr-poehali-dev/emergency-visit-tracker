@@ -73,6 +73,57 @@ export default function SyncTab({ objects }: SyncTabProps) {
     URL.revokeObjectURL(url);
   };
 
+  const handleRestoreBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm('Восстановление из резервной копии загрузит данные на сервер. Продолжить?')) {
+      e.target.value = '';
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncStatus('Чтение файла...');
+
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+
+      if (!backup.objects || !Array.isArray(backup.objects)) {
+        throw new Error('Некорректный формат файла');
+      }
+
+      setSyncStatus(`Найдено ${backup.objects.length} объектов. Загрузка на сервер...`);
+
+      const result = await uploadToServer(backup.objects, (current, total, message) => {
+        setSyncStatus(message);
+      });
+
+      if (result.success) {
+        if (backup.users && Array.isArray(backup.users)) {
+          localStorage.setItem('mchs_users', JSON.stringify(backup.users));
+        }
+        
+        setSyncStatus(`✓ Восстановлено: ${result.message}`);
+        setLastSync(new Date().toLocaleString('ru-RU'));
+        
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      const errorMsg = error.message || String(error);
+      setSyncStatus(`✗ Ошибка: ${errorMsg}`);
+      console.error('Restore error:', error);
+      alert(`Ошибка восстановления: ${errorMsg}`);
+    } finally {
+      setIsSyncing(false);
+      e.target.value = '';
+    }
+  };
+
   const handleSync = async () => {
     setIsSyncing(true);
     setSyncStatus('Подготовка данных...');
@@ -187,7 +238,7 @@ export default function SyncTab({ objects }: SyncTabProps) {
                 className="border-green-600 text-green-300 hover:bg-green-900/20 h-12"
               >
                 <Icon name="Download" size={18} className="mr-2" />
-                Резервная копия
+                Скачать резервную копию
               </Button>
               
               <Button 
@@ -198,6 +249,26 @@ export default function SyncTab({ objects }: SyncTabProps) {
               >
                 <Icon name={serverStatus === 'checking' ? 'Loader2' : 'Wifi'} size={18} className={`mr-2 ${serverStatus === 'checking' ? 'animate-spin' : ''}`} />
                 {serverStatus === 'checking' ? 'Проверка...' : serverStatus === 'online' ? 'Сервер доступен' : serverStatus === 'offline' ? 'Сервер недоступен' : 'Проверить сервер'}
+              </Button>
+            </div>
+            
+            <div>
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleRestoreBackup}
+                disabled={isSyncing}
+                id="restore-backup-input"
+                className="hidden"
+              />
+              <Button 
+                onClick={() => document.getElementById('restore-backup-input')?.click()}
+                disabled={isSyncing}
+                variant="outline"
+                className="w-full border-amber-600 text-amber-300 hover:bg-amber-900/20 h-12"
+              >
+                <Icon name="Upload" size={18} className="mr-2" />
+                Восстановить из резервной копии
               </Button>
             </div>
           </div>
