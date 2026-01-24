@@ -17,12 +17,19 @@ export interface SyncResult {
 export async function downloadFromServer(): Promise<SyncResult> {
   try {
     console.log('Download: Starting fetch from', SYNC_URL);
+    console.log('Download: Browser', navigator.userAgent);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
     const response = await fetch(SYNC_URL, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal
     });
-
-    console.log('Download: Response status', response.status);
+    
+    clearTimeout(timeoutId);
+    console.log('Download: Response status', response.status, 'headers:', response.headers);
 
     if (!response.ok) {
       console.error('Download: Response not OK', response.status, response.statusText);
@@ -34,19 +41,40 @@ export async function downloadFromServer(): Promise<SyncResult> {
     }
 
     const text = await response.text();
-    console.log('Download: Response text length', text.length);
+    console.log('Download: Response text length', text.length, 'first 200 chars:', text.substring(0, 200));
     
     const result = JSON.parse(text);
-    console.log('Download: Parsed result', result.status, result.data);
+    console.log('Download: Parsed result status:', result.status);
+    console.log('Download: Objects count:', result.data?.objects?.length);
+    console.log('Download: Users count:', result.data?.users?.length);
     
     if (result.status === 'success' && result.data) {
       const objects = result.data.objects || [];
       const users = result.data.users || [];
       
       console.log('Download: Saving to localStorage', objects.length, 'objects', users.length, 'users');
-      localStorage.setItem('mchs_objects', JSON.stringify(objects));
-      localStorage.setItem('mchs_users', JSON.stringify(users));
-      localStorage.setItem('mchs_last_sync', new Date().toISOString());
+      
+      try {
+        const objectsStr = JSON.stringify(objects);
+        const usersStr = JSON.stringify(users);
+        console.log('Download: Serialized sizes:', objectsStr.length, 'bytes objects,', usersStr.length, 'bytes users');
+        
+        localStorage.setItem('mchs_objects', objectsStr);
+        console.log('Download: Saved objects to localStorage');
+        
+        localStorage.setItem('mchs_users', usersStr);
+        console.log('Download: Saved users to localStorage');
+        
+        localStorage.setItem('mchs_last_sync', new Date().toISOString());
+        console.log('Download: Saved sync timestamp');
+      } catch (storageError: any) {
+        console.error('Download: LocalStorage error', storageError);
+        return {
+          success: false,
+          message: 'Не хватает памяти. Попробуйте удалить старые данные или фото.',
+          error: `LocalStorage quota: ${storageError.message}`
+        };
+      }
       
       return {
         success: true,
@@ -63,6 +91,26 @@ export async function downloadFromServer(): Promise<SyncResult> {
     };
   } catch (error: any) {
     console.error('Download: Exception', error);
+    console.error('Download: Error name:', error.name);
+    console.error('Download: Error message:', error.message);
+    console.error('Download: Error stack:', error.stack);
+    
+    if (error.name === 'AbortError') {
+      return {
+        success: false,
+        message: 'Превышено время ожидания (30 сек). Проверьте интернет.',
+        error: 'Timeout after 30 seconds'
+      };
+    }
+    
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      return {
+        success: false,
+        message: 'Нет соединения с сервером. Проверьте интернет.',
+        error: `Network error: ${error.message}`
+      };
+    }
+    
     return {
       success: false,
       message: `Ошибка: ${error.message}`,
@@ -79,6 +127,7 @@ export async function uploadToServer(
   onProgress?: (current: number, total: number, message: string) => void
 ): Promise<SyncResult> {
   try {
+    console.log('Upload: Starting upload of', objects.length, 'objects');
     const totalObjects = objects.length;
     let uploadedPhotos = 0;
     
@@ -86,25 +135,40 @@ export async function uploadToServer(
       const obj = objects[i];
       const progress = Math.round(((i + 1) / totalObjects) * 100);
       
+      console.log(`Upload: Object ${i + 1}/${totalObjects} (${progress}%):`, obj.name);
+      
       if (onProgress) {
         onProgress(i + 1, totalObjects, `Отправка ${i + 1} из ${totalObjects} (${progress}%)`);
       }
       
+      const payload = JSON.stringify({
+        action: 'sync',
+        objects: [obj],
+        users: []
+      });
+      
+      console.log(`Upload: Payload size for "${obj.name}":`, payload.length, 'bytes');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      
       const response = await fetch(SYNC_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'sync',
-          objects: [obj],
-          users: []
-        })
+        body: payload,
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
+      console.log(`Upload: Response status for "${obj.name}":`, response.status);
 
       if (!response.ok) {
+        console.error(`Upload: Failed for "${obj.name}":`, response.status, response.statusText);
         throw new Error(`Ошибка на объекте "${obj.name || 'без имени'}": HTTP ${response.status}`);
       }
 
       const result = await response.json();
+      console.log(`Upload: Result for "${obj.name}":`, result.status, 'photos:', result.uploaded_photos);
       
       if (result.status !== 'success') {
         throw new Error(`Объект "${obj.name || 'без имени'}": ${result.error || 'Ошибка'}`);
@@ -116,6 +180,7 @@ export async function uploadToServer(
     }
     
     localStorage.setItem('mchs_last_sync', new Date().toISOString());
+    console.log('Upload: Complete. Total photos:', uploadedPhotos);
     
     return {
       success: true,
@@ -123,6 +188,26 @@ export async function uploadToServer(
       objectsCount: totalObjects
     };
   } catch (error: any) {
+    console.error('Upload: Exception', error);
+    console.error('Upload: Error name:', error.name);
+    console.error('Upload: Error message:', error.message);
+    
+    if (error.name === 'AbortError') {
+      return {
+        success: false,
+        message: 'Превышено время ожидания (60 сек). Фото слишком большие или плохой интернет.',
+        error: 'Timeout after 60 seconds'
+      };
+    }
+    
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('Load failed')) {
+      return {
+        success: false,
+        message: 'Нет соединения с сервером. Проверьте интернет.',
+        error: `Network error: ${error.message}`
+      };
+    }
+    
     return {
       success: false,
       message: error.message || 'Ошибка синхронизации',
