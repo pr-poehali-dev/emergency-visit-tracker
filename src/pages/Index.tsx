@@ -146,11 +146,14 @@ function Index() {
         
         if (response.ok) {
           const result = await response.json();
+          console.log('📦 Server response:', result);
+          
           if (result.status === 'success' && result.data) {
             const serverObjects = result.data.objects || [];
             const serverUsers = result.data.users || [];
             
             console.log('✅ Загружено с сервера:', serverObjects.length, 'объектов');
+            console.log('📊 Пример объекта:', serverObjects[0]);
             
             // Если на сервере есть данные - используем их
             if (serverObjects.length > 0) {

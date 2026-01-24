@@ -25,11 +25,23 @@ export default function ObjectHistoryScreen({
   onCreateTask,
   onUpdateObject
 }: ObjectHistoryScreenProps) {
+  console.log('🏢 ObjectHistoryScreen render:', object?.name, 'visits:', object?.visits?.length);
+  
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [editingVisit, setEditingVisit] = useState<string | null>(null);
   const [taskComment, setTaskComment] = useState('');
   const [taskPhotos, setTaskPhotos] = useState<string[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
+  
+  if (!object) {
+    console.error('❌ ObjectHistoryScreen: object is null/undefined');
+    return <div className="min-h-screen flex items-center justify-center text-white">Объект не найден</div>;
+  }
+  
+  if (!Array.isArray(object.visits)) {
+    console.error('❌ ObjectHistoryScreen: object.visits is not an array', object.visits);
+    object.visits = [];
+  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

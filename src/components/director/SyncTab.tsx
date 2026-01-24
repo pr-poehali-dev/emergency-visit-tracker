@@ -177,6 +177,31 @@ export default function SyncTab({ objects }: SyncTabProps) {
       setIsSyncing(false);
     }
   };
+  
+  const handleClearAndReload = () => {
+    if (!confirm('Очистить локальные данные и загрузить с сервера? Несинхронизированные данные будут потеряны.')) {
+      return;
+    }
+    
+    setIsSyncing(true);
+    setSyncStatus('Очистка локальных данных...');
+    
+    try {
+      localStorage.removeItem('mchs_objects');
+      localStorage.removeItem('mchs_users');
+      localStorage.removeItem('mchs_last_sync');
+      
+      setSyncStatus('✓ Локальные данные очищены. Перезагрузка...');
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      setSyncStatus('✗ Ошибка очистки данных');
+      console.error('Clear error:', error);
+      setIsSyncing(false);
+    }
+  };
 
   const totalPhotos = getAllPhotos().length;
   const savedSync = localStorage.getItem('mchs_last_sync');
@@ -254,7 +279,7 @@ export default function SyncTab({ objects }: SyncTabProps) {
               </Button>
             </div>
             
-            <div>
+            <div className="space-y-3">
               <input
                 type="file"
                 accept=".json"
@@ -271,6 +296,16 @@ export default function SyncTab({ objects }: SyncTabProps) {
               >
                 <Icon name="Upload" size={18} className="mr-2" />
                 Восстановить из резервной копии
+              </Button>
+              
+              <Button 
+                onClick={handleClearAndReload}
+                disabled={isSyncing}
+                variant="outline"
+                className="w-full border-red-600 text-red-300 hover:bg-red-900/20 h-12"
+              >
+                <Icon name="Trash2" size={18} className="mr-2" />
+                Очистить кеш и загрузить с сервера
               </Button>
             </div>
           </div>
