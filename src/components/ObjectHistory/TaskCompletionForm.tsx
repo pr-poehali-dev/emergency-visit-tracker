@@ -48,7 +48,7 @@ export default function TaskCompletionForm({
           onChange={onPhotoUpload}
           className="w-full bg-slate-800 border border-slate-600 text-white rounded-md file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-green-600 file:text-white file:cursor-pointer hover:file:bg-green-700"
         />
-        <p className="text-xs text-slate-500 mt-1">Фото будет автоматически сжато для быстрой отправки</p>
+        <p className="text-xs text-slate-500 mt-1">Фото будет сжато до 1280px для надёжной синхронизации</p>
         {taskPhotos.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mt-3">
             {taskPhotos.map((photo, idx) => (

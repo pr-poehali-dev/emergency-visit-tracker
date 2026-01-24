@@ -105,7 +105,7 @@ export default function ObjectHistoryScreen({
             let width = img.width;
             let height = img.height;
             
-            const maxSize = 1920;
+            const maxSize = 1280;
             if (width > maxSize || height > maxSize) {
               if (width > height) {
                 height = (height / width) * maxSize;
@@ -126,12 +126,18 @@ export default function ObjectHistoryScreen({
             
             ctx.drawImage(img, 0, 0, width, height);
             
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+            let compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            
+            const sizeInMB = (compressedBase64.length * 0.75) / (1024 * 1024);
+            if (sizeInMB > 2) {
+              compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
+            }
+            
             setTaskPhotos([...taskPhotos, compressedBase64]);
             e.target.value = '';
           } catch (error) {
             console.error('Image compression error:', error);
-            setTaskPhotos([...taskPhotos, base64]);
+            alert('Ошибка сжатия изображения. Попробуйте другое фото.');
             e.target.value = '';
           }
         };
