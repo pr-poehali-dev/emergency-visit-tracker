@@ -118,9 +118,40 @@ function Index() {
 
   const [users, setUsers] = useState<User[]>(getInitialUsers);
 
-  useEffect(() => {
-    localStorage.setItem('mchs_users', JSON.stringify(users));
-  }, [users]);
+  const updateUsers = async (newUsers: User[]) => {
+    console.log('✅ updateUsers called with:', newUsers.length, 'users');
+    setUsers(newUsers);
+    
+    // Сохраняем на сервер автоматически
+    try {
+      console.log('🔄 Сохранение пользователей на сервер...');
+      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sync',
+          objects: [],
+          users: newUsers
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Пользователи сохранены:', result);
+        
+        // Сохраняем в localStorage
+        localStorage.setItem('mchs_users', JSON.stringify(newUsers));
+      } else {
+        console.error('❌ Ошибка сохранения пользователей:', response.status);
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка сохранения пользователей:', error);
+      alert('❌ Не удалось сохранить пользователя на сервер. Проверьте интернет.');
+    }
+  };
 
   const getInitialObjects = (): SiteObject[] => {
     const saved = localStorage.getItem('mchs_objects');
@@ -378,7 +409,7 @@ function Index() {
           objects={objects}
           users={users}
           onBack={handleBackToObjects}
-          onUpdateUsers={setUsers}
+          onUpdateUsers={updateUsers}
           onUpdateObjects={updateObjects}
         />
       )}

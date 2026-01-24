@@ -86,8 +86,13 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             ''')
             photos_rows = cursor.fetchall()
             
-            # Пользователи пока не нужны для синхронизации
-            users_rows = []
+            # Получаем пользователей
+            cursor.execute('''
+                SELECT id, username, password_hash, full_name, role, phone, created_at
+                FROM t_p32730230_emergency_visit_trac.users
+                ORDER BY id
+            ''')
+            users_rows = cursor.fetchall() or []
             
             cursor.close()
             conn.close()
@@ -154,25 +159,18 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 
                 objects.append(obj)
             
-            # Пользователи для совместимости (пока хардкод)
-            users = [
-                {
-                    'id': '1',
-                    'username': 'director',
-                    'fullName': 'Директор',
-                    'phone': '',
-                    'role': 'director',
-                    'createdAt': '2024-01-01T00:00:00'
-                },
-                {
-                    'id': '2',
-                    'username': 'tech',
-                    'fullName': 'Техник',
-                    'phone': '',
-                    'role': 'technician',
-                    'createdAt': '2024-01-01T00:00:00'
-                }
-            ]
+            # Собираем пользователей из БД
+            users = []
+            for user_row in users_rows:
+                users.append({
+                    'id': str(user_row[0]),
+                    'username': user_row[1],
+                    'password': user_row[2],  # password_hash хранится в БД
+                    'fullName': user_row[3],
+                    'role': user_row[4],
+                    'phone': user_row[5] or '',
+                    'createdAt': user_row[6].isoformat() if user_row[6] else '2024-01-01T00:00:00'
+                })
             
             print(f"GET: Returning {len(objects)} objects, {len(users)} users")
             
@@ -361,11 +359,47 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 
                 saved_count += 1
             
+            # Сохраняем пользователей
+            users_saved = 0
+            for user in local_users:
+                user_id = user.get('id')
+                username = user.get('username')
+                password = user.get('password')
+                full_name = user.get('fullName')
+                role = user.get('role')
+                phone = user.get('phone', '')
+                
+                if not username or not password or not full_name:
+                    continue
+                
+                # Проверяем существование пользователя
+                cursor.execute('''
+                    SELECT id FROM t_p32730230_emergency_visit_trac.users WHERE username = %s
+                ''', (username,))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    # Обновляем существующего пользователя
+                    cursor.execute('''
+                        UPDATE t_p32730230_emergency_visit_trac.users
+                        SET password_hash = %s, full_name = %s, role = %s, phone = %s
+                        WHERE username = %s
+                    ''', (password, full_name, role, phone, username))
+                else:
+                    # Создаём нового пользователя
+                    cursor.execute('''
+                        INSERT INTO t_p32730230_emergency_visit_trac.users 
+                        (username, password_hash, full_name, role, phone, created_at)
+                        VALUES (%s, %s, %s, %s, %s, NOW())
+                    ''', (username, password, full_name, role, phone))
+                
+                users_saved += 1
+            
             conn.commit()
             cursor.close()
             conn.close()
             
-            print(f"SYNC: Saved {saved_count} objects, uploaded {len(uploaded_files)} files")
+            print(f"SYNC: Saved {saved_count} objects, {users_saved} users, uploaded {len(uploaded_files)} files")
             
             return {
                 'statusCode': 200,
@@ -375,7 +409,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 },
                 'body': json.dumps({
                     'status': 'success',
-                    'message': f'Синхронизировано {saved_count} объектов',
+                    'message': f'Синхронизировано {saved_count} объектов и {users_saved} пользователей',
                     'uploaded_photos': len(uploaded_files)
                 }, ensure_ascii=False),
                 'isBase64Encoded': False
