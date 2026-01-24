@@ -88,6 +88,7 @@ export async function uploadToServer(
   onProgress?: (current: number, total: number, message: string) => void
 ): Promise<SyncResult> {
   try {
+    console.log('🚀 uploadToServer started with', objects.length, 'objects');
     const totalObjects = objects.length;
     let uploadedPhotos = 0;
     
@@ -95,19 +96,28 @@ export async function uploadToServer(
       const obj = objects[i];
       const progress = Math.round(((i + 1) / totalObjects) * 100);
       
+      console.log(`📤 Sending object ${i + 1}/${totalObjects}:`, obj.name);
+      
       if (onProgress) {
         onProgress(i + 1, totalObjects, `Отправка ${i + 1} из ${totalObjects} (${progress}%)`);
       }
       
+      const requestBody = JSON.stringify({
+        action: 'sync',
+        objects: [obj],
+        users: []
+      });
+      
+      console.log('📦 Request body size:', (requestBody.length / 1024).toFixed(2), 'KB');
+      
       const response = await fetch(SYNC_URL, {
         method: 'POST',
+        mode: 'cors',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'sync',
-          objects: [obj],
-          users: []
-        })
+        body: requestBody
       });
+      
+      console.log('📨 Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         throw new Error(`Ошибка на объекте "${obj.name || 'без имени'}": HTTP ${response.status}`);
