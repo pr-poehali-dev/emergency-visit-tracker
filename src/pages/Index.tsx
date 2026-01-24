@@ -175,32 +175,59 @@ function Index() {
     autoLoad();
   }, []);
 
-  const updateObjects = (newObjects: SiteObject[]) => {
+  const updateObjects = async (newObjects: SiteObject[]) => {
     console.log('✅ updateObjects called with:', newObjects.length, 'objects');
     setObjects(newObjects);
+    
+    // Находим изменённые объекты (сравниваем с текущим состоянием)
+    const changedObjects = newObjects.filter(newObj => {
+      const oldObj = objects.find(o => o.id === newObj.id);
+      if (!oldObj) return true; // Новый объект
+      return JSON.stringify(oldObj) !== JSON.stringify(newObj); // Изменён
+    });
+    
+    if (changedObjects.length === 0) {
+      console.log('⏭️ Нет изменений, пропускаем сохранение');
+      return;
+    }
+    
+    console.log('🔄 Сохраняем', changedObjects.length, 'изменённых объектов');
+    
+    // Сохраняем только изменённые объекты на сервер
     try {
-      const dataString = JSON.stringify(newObjects);
-      const sizeKB = (dataString.length / 1024).toFixed(2);
-      console.log('📦 Data size:', sizeKB, 'KB');
-      localStorage.setItem('mchs_objects', dataString);
-      console.log('✅ LocalStorage updated successfully');
-    } catch (error) {
-      console.error('❌ LocalStorage save error:', error);
-      if (error instanceof Error && error.name === 'QuotaExceededError') {
-        alert('❌ LocalStorage переполнен! Удалите старые фото.');
+      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sync',
+          objects: changedObjects,
+          users: []
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Автосохранение успешно:', result);
+        
+        // Сохраняем в localStorage только если не переполнен
+        try {
+          localStorage.setItem('mchs_objects', JSON.stringify(newObjects));
+        } catch (storageError) {
+          console.warn('⚠️ LocalStorage переполнен, но данные сохранены на сервере');
+        }
       } else {
-        alert('❌ Ошибка сохранения: ' + (error instanceof Error ? error.message : 'Unknown'));
+        console.error('❌ Ошибка автосохранения:', response.status);
+        throw new Error(`HTTP ${response.status}`);
       }
+    } catch (error) {
+      console.error('❌ Ошибка автосохранения:', error);
+      alert('❌ Не удалось сохранить на сервер. Проверьте интернет.');
     }
   };
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('mchs_objects', JSON.stringify(objects));
-    } catch (error) {
-      console.error('LocalStorage save error:', error);
-    }
-  }, [objects]);
+  // Удалён автоматический useEffect для localStorage - теперь сохранение идёт через updateObjects на сервер
 
   const handleLogin = (role: UserRole, name: string) => {
     setUserRole(role);
@@ -243,7 +270,7 @@ function Index() {
     setCurrentScreen('director');
   };
 
-  const handleSaveVisit = (visit: Omit<Visit, 'id' | 'createdAt'>) => {
+  const handleSaveVisit = async (visit: Omit<Visit, 'id' | 'createdAt'>) => {
     if (!selectedObject) return;
 
     try {
@@ -259,7 +286,7 @@ function Index() {
           : obj
       );
 
-      updateObjects(updatedObjects);
+      await updateObjects(updatedObjects);
 
       setSelectedObject(prev => 
         prev ? { ...prev, visits: [...prev.visits, newVisit] } : null
@@ -294,13 +321,13 @@ function Index() {
           onBack={handleBackToObjects}
           onCreateVisit={handleCreateVisit}
           onCreateTask={handleCreateTask}
-          onUpdateObject={(updatedObject) => {
+          onUpdateObject={async (updatedObject) => {
             console.log('ObjectHistoryScreen onUpdateObject called with:', updatedObject);
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
             );
             console.log('Calling updateObjects with updated list');
-            updateObjects(updatedObjects);
+            await updateObjects(updatedObjects);
             setSelectedObject(updatedObject);
             console.log('setSelectedObject called with updated object');
           }}
@@ -321,11 +348,11 @@ function Index() {
           object={selectedObject}
           userName={userName}
           onBack={handleBackToHistory}
-          onSave={(updatedObject) => {
+          onSave={async (updatedObject) => {
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
             );
-            updateObjects(updatedObjects);
+            await updateObjects(updatedObjects);
             setSelectedObject(updatedObject);
           }}
         />
@@ -336,11 +363,11 @@ function Index() {
           object={selectedObject}
           userName={userName}
           onBack={handleBackToObjects}
-          onUpdateObject={(updatedObject) => {
+          onUpdateObject={async (updatedObject) => {
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
             );
-            updateObjects(updatedObjects);
+            await updateObjects(updatedObjects);
             setSelectedObject(updatedObject);
           }}
         />

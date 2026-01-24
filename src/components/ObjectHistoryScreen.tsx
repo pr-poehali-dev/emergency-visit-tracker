@@ -72,7 +72,7 @@ export default function ObjectHistoryScreen({
     }
   };
 
-  const handleCompleteTask = (visitId: string) => {
+  const handleCompleteTask = async (visitId: string) => {
     if (!taskComment.trim()) {
       alert('Добавьте комментарий к выполненной задаче');
       return;
@@ -103,7 +103,7 @@ export default function ObjectHistoryScreen({
       const updatedObject = { ...object, visits: updatedVisits };
       console.log('Updated object:', updatedObject);
       
-      onUpdateObject(updatedObject);
+      await onUpdateObject(updatedObject);
       console.log('onUpdateObject called successfully');
       
       setEditingVisit(null);
@@ -198,7 +198,7 @@ export default function ObjectHistoryScreen({
     }
   };
 
-  const handleDeletePhoto = (visitId: string, photoIndex: number) => {
+  const handleDeletePhoto = async (visitId: string, photoIndex: number) => {
     const visit = object.visits.find(v => v.id === visitId);
     if (!visit) return;
     
@@ -206,12 +206,12 @@ export default function ObjectHistoryScreen({
     const updatedVisits = object.visits.map(v => 
       v.id === visitId ? { ...v, photos: updatedPhotos } : v
     );
-    onUpdateObject({ ...object, visits: updatedVisits });
+    await onUpdateObject({ ...object, visits: updatedVisits });
   };
 
-  const handleDeleteVisit = (visitId: string) => {
+  const handleDeleteVisit = async (visitId: string) => {
     const updatedVisits = object.visits.filter(v => v.id !== visitId);
-    onUpdateObject({ ...object, visits: updatedVisits });
+    await onUpdateObject({ ...object, visits: updatedVisits });
     setEditingVisit(null);
   };
 
