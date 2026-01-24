@@ -73,10 +73,21 @@ export default function ObjectHistoryScreen({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Файл слишком большой. Максимум 10 МБ.');
+      e.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const base64 = event.target?.result as string;
       setTaskPhotos([...taskPhotos, base64]);
+      e.target.value = '';
+    };
+    reader.onerror = () => {
+      alert('Ошибка загрузки фото');
+      e.target.value = '';
     };
     reader.readAsDataURL(file);
   };
@@ -336,10 +347,12 @@ export default function ObjectHistoryScreen({
                           <label className="text-slate-200 text-sm mb-2 block">Фото отчёта *</label>
                           <input
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/jpg,image/png,image/heic,image/heif"
+                            capture="environment"
                             onChange={handlePhotoUpload}
                             className="w-full bg-slate-800 border border-slate-600 text-white rounded-md file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-green-600 file:text-white file:cursor-pointer hover:file:bg-green-700"
                           />
+                          <p className="text-xs text-slate-500 mt-1">Максимум 10 МБ на фото</p>
                           {taskPhotos.length > 0 && (
                             <div className="grid grid-cols-3 gap-2 mt-3">
                               {taskPhotos.map((photo, idx) => (

@@ -144,23 +144,34 @@ export default function InstallationObjectScreen({
                   <Label className="text-slate-200 mb-2 block">Фотоотчёт</Label>
                   <Input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/heic,image/heif"
                     multiple
                     onChange={(e) => {
                       const files = e.target.files;
-                      if (files) {
-                        Array.from(files).forEach(file => {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const base64 = event.target?.result as string;
-                            setPhotos(prev => [...prev, base64]);
-                          };
-                          reader.readAsDataURL(file);
-                        });
-                      }
+                      if (!files) return;
+
+                      Array.from(files).forEach(file => {
+                        if (file.size > 10 * 1024 * 1024) {
+                          alert(`Файл ${file.name} слишком большой. Максимум 10 МБ.`);
+                          return;
+                        }
+
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const base64 = event.target?.result as string;
+                          setPhotos(prev => [...prev, base64]);
+                        };
+                        reader.onerror = () => {
+                          alert(`Ошибка загрузки ${file.name}`);
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                      
+                      e.target.value = '';
                     }}
                     className="bg-slate-900/50 border-slate-600 text-white"
                   />
+                  <p className="text-xs text-slate-500 mt-1">Максимум 10 МБ на фото</p>
                   {photos.length > 0 && (
                     <div className="grid grid-cols-3 gap-2 mt-3">
                       {photos.map((photo, idx) => (
