@@ -52,11 +52,20 @@ export default function ObjectsListScreen({
     }
   };
 
-  const filteredObjects = objects.filter(obj => 
-    !obj.deleted &&
-    (obj.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    obj.address.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredObjects = objects
+    .filter(obj => 
+      !obj.deleted &&
+      (obj.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      obj.address.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .sort((a, b) => {
+      const aHasTasks = a.visits.some(v => v.type === 'task' && !v.taskCompleted);
+      const bHasTasks = b.visits.some(v => v.type === 'task' && !v.taskCompleted);
+      
+      if (aHasTasks && !bHasTasks) return -1;
+      if (!aHasTasks && bHasTasks) return 1;
+      return 0;
+    });
 
   return (
     <div className="min-h-screen p-4 md:p-6">
