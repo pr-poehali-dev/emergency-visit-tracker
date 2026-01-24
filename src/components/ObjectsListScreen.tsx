@@ -102,7 +102,7 @@ export default function ObjectsListScreen({
               {isSyncing ? 'Загрузка...' : 'Синхронизация'}
             </Button>
             
-            {(userRole === 'director' || userRole === 'supervisor') && (
+            {userRole === 'director' && (
               <Button 
                 onClick={onOpenDirectorPanel}
                 className="bg-secondary hover:bg-secondary/90"
