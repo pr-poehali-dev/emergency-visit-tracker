@@ -17,19 +17,13 @@ export interface SyncResult {
 export async function downloadFromServer(): Promise<SyncResult> {
   try {
     console.log('Download: Starting fetch from', SYNC_URL);
-    console.log('Download: Browser', navigator.userAgent);
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
     
     const response = await fetch(SYNC_URL, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal
+      headers: { 'Content-Type': 'application/json' }
     });
-    
-    clearTimeout(timeoutId);
-    console.log('Download: Response status', response.status, 'headers:', response.headers);
+
+    console.log('Download: Response status', response.status);
 
     if (!response.ok) {
       console.error('Download: Response not OK', response.status, response.statusText);
@@ -95,19 +89,11 @@ export async function downloadFromServer(): Promise<SyncResult> {
     console.error('Download: Error message:', error.message);
     console.error('Download: Error stack:', error.stack);
     
-    if (error.name === 'AbortError') {
+    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError') || error.message?.includes('Load failed')) {
       return {
         success: false,
-        message: 'Превышено время ожидания (30 сек). Проверьте интернет.',
-        error: 'Timeout after 30 seconds'
-      };
-    }
-    
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      return {
-        success: false,
-        message: 'Нет соединения с сервером. Проверьте интернет.',
-        error: `Network error: ${error.message}`
+        message: 'Ошибка сети. Проверьте интернет и попробуйте снова.',
+        error: `Network: ${error.message}`
       };
     }
     
@@ -149,17 +135,12 @@ export async function uploadToServer(
       
       console.log(`Upload: Payload size for "${obj.name}":`, payload.length, 'bytes');
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
-      
       const response = await fetch(SYNC_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: payload,
-        signal: controller.signal
+        body: payload
       });
-      
-      clearTimeout(timeoutId);
+
       console.log(`Upload: Response status for "${obj.name}":`, response.status);
 
       if (!response.ok) {
@@ -192,19 +173,11 @@ export async function uploadToServer(
     console.error('Upload: Error name:', error.name);
     console.error('Upload: Error message:', error.message);
     
-    if (error.name === 'AbortError') {
+    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError') || error.message?.includes('Load failed')) {
       return {
         success: false,
-        message: 'Превышено время ожидания (60 сек). Фото слишком большие или плохой интернет.',
-        error: 'Timeout after 60 seconds'
-      };
-    }
-    
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('Load failed')) {
-      return {
-        success: false,
-        message: 'Нет соединения с сервером. Проверьте интернет.',
-        error: `Network error: ${error.message}`
+        message: 'Ошибка сети при отправке. Проверьте интернет.',
+        error: `Network: ${error.message}`
       };
     }
     
