@@ -42,16 +42,34 @@ export default function ObjectHistoryScreen({
     console.error('❌ ObjectHistoryScreen: object.visits is not an array', object.visits);
     object.visits = [];
   }
+  
+  // Убеждаемся что у каждого визита есть массив photos
+  object.visits.forEach(visit => {
+    if (!Array.isArray(visit.photos)) {
+      visit.photos = [];
+    }
+  });
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+    if (!dateString) {
+      return 'Дата не указана';
+    }
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Дата не указана';
+      }
+      return new Intl.DateTimeFormat('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch (error) {
+      console.error('formatDate error:', error, 'dateString:', dateString);
+      return 'Дата не указана';
+    }
   };
 
   const handleCompleteTask = (visitId: string) => {

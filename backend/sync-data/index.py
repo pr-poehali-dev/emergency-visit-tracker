@@ -111,7 +111,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                     'comment': visit_row[4] or '',
                     'photos': photos_by_visit.get(visit_row[0], []),
                     'createdBy': visit_row[5] or '',
-                    'createdAt': visit_row[6].isoformat() if visit_row[6] else '',
+                    'createdAt': visit_row[6].isoformat() if visit_row[6] else '2024-01-01T00:00:00',
                     'isLocked': visit_row[7] if visit_row[7] is not None else True
                 }
                 # Добавляем поля задач если они есть
@@ -307,9 +307,9 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                     if not visit_exists:
                         cursor.execute('''
                             INSERT INTO t_p32730230_emergency_visit_trac.visits_v2 
-                            (id, object_id, user_id, visit_date, visit_type, comment, created_by, is_locked,
+                            (id, object_id, user_id, visit_date, visit_type, comment, created_by, created_at, is_locked,
                              task_description, task_completed, task_completed_by, task_completed_at)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, %s, %s, %s, %s, %s)
                         ''', (
                             visit_id,
                             obj_id,
