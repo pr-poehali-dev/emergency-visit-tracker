@@ -2,7 +2,8 @@
  * Универсальная библиотека синхронизации для всех ролей
  */
 
-const SYNC_URL = 'https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a';
+// Определяем URL API в зависимости от окружения
+const SYNC_URL = import.meta.env.VITE_API_URL || '/api/sync';
 
 // Тест доступности функции
 async function testConnection(): Promise<boolean> {
