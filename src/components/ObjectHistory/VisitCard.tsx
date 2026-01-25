@@ -82,7 +82,15 @@ export default function VisitCard({
             </div>
             {visit.type === 'task' && visit.taskDescription && (
               <div className="mb-2 p-3 bg-slate-900/50 rounded-lg border border-slate-700">
-                <p className="text-sm text-slate-400 mb-1">Задача от директора:</p>
+                <p className={`text-sm mb-1 ${
+                  visit.createdByRole === 'director' 
+                    ? 'text-blue-400' 
+                    : visit.createdByRole === 'supervisor' 
+                    ? 'text-amber-400' 
+                    : 'text-slate-400'
+                }`}>
+                  Задача от {visit.createdByRole === 'director' ? 'директора' : visit.createdByRole === 'supervisor' ? `руководителя (${visit.createdBy})` : visit.createdBy}:
+                </p>
                 <p className="text-slate-300">{visit.taskDescription}</p>
               </div>
             )}

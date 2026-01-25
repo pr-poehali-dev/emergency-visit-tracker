@@ -8,6 +8,7 @@ import type { SiteObject } from '@/pages/Index';
 interface CreateTaskScreenProps {
   object: SiteObject;
   userName: string;
+  userRole: 'technician' | 'director' | 'supervisor' | null;
   onBack: () => void;
   onSave: (updatedObject: SiteObject) => void;
 }
@@ -15,6 +16,7 @@ interface CreateTaskScreenProps {
 export default function CreateTaskScreen({ 
   object, 
   userName, 
+  userRole,
   onBack, 
   onSave 
 }: CreateTaskScreenProps) {
@@ -38,6 +40,7 @@ export default function CreateTaskScreen({
       comment: '',
       photos: [],
       createdBy: userName,
+      createdByRole: userRole || 'technician',
       createdAt: new Date().toISOString(),
       taskDescription: taskDescription,
       taskCompleted: false,

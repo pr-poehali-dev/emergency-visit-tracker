@@ -37,9 +37,17 @@ export default function ObjectsListScreen({
       
       if (result.success) {
         setSyncStatus(`✓ ${result.message}`);
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        
+        // Загружаем обновлённые данные из localStorage
+        const updatedObjects = localStorage.getItem('mchs_objects');
+        const updatedUsers = localStorage.getItem('mchs_users');
+        
+        if (updatedObjects || updatedUsers) {
+          // Через 1 секунду перезагружаем страницу для применения изменений
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        }
       } else {
         setSyncStatus(`✗ ${result.message}`);
         setTimeout(() => setSyncStatus(''), 5000);

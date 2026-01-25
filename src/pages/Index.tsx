@@ -25,6 +25,7 @@ export interface Visit {
   comment: string;
   photos: string[];
   createdBy: string;
+  createdByRole?: 'technician' | 'director' | 'supervisor';
   createdAt: string;
   taskDescription?: string;
   taskCompleted?: boolean;
@@ -382,6 +383,7 @@ function Index() {
         <CreateTaskScreen 
           object={selectedObject}
           userName={userName}
+          userRole={userRole}
           onBack={handleBackToHistory}
           onSave={async (updatedObject) => {
             const updatedObjects = objects.map(obj => 

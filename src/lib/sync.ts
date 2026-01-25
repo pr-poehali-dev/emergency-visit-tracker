@@ -197,13 +197,13 @@ export async function uploadToServer(
 }
 
 /**
- * ПОЛНАЯ СИНХРОНИЗАЦИЯ: отправка + загрузка
+ * ПОЛНАЯ СИНХРОНИЗАЦИЯ: отправка + сброс кэша + загрузка
  */
 export async function fullSync(
   objects: any[],
   onProgress?: (message: string) => void
 ): Promise<SyncResult> {
-  // Сначала отправляем данные на сервер
+  // Шаг 1: Отправляем данные на сервер
   if (onProgress) onProgress('Отправка данных на сервер...');
   
   const uploadResult = await uploadToServer(objects, (current, total, message) => {
@@ -214,7 +214,21 @@ export async function fullSync(
     return uploadResult;
   }
   
-  // Потом скачиваем обновлённые данные
+  // Шаг 2: Сбрасываем кэш (очищаем localStorage)
+  if (onProgress) onProgress('Очистка кэша...');
+  
+  try {
+    localStorage.removeItem('mchs_objects');
+    localStorage.removeItem('mchs_users');
+    console.log('✅ Кэш очищен');
+  } catch (error) {
+    console.warn('⚠️ Ошибка очистки кэша:', error);
+  }
+  
+  // Небольшая задержка для гарантии сброса
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  // Шаг 3: Загружаем обновлённые данные с сервера
   if (onProgress) onProgress('Загрузка обновлённых данных...');
   
   const downloadResult = await downloadFromServer();

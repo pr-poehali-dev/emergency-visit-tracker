@@ -72,7 +72,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             # Получаем визиты (только неархивные)
             cursor.execute('''
                 SELECT id, object_id, visit_date, visit_type, comment, created_by, created_at, is_locked,
-                       task_description, task_completed, task_completed_by, task_completed_at
+                       task_description, task_completed, task_completed_by, task_completed_at, created_by_role
                 FROM t_p32730230_emergency_visit_trac.visits_v2
                 WHERE is_archived IS NULL OR is_archived = FALSE
                 ORDER BY object_id, visit_date DESC
@@ -129,6 +129,8 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                     visit['taskCompletedBy'] = visit_row[10]
                 if visit_row[11]:  # task_completed_at
                     visit['taskCompletedAt'] = visit_row[11].isoformat()
+                if visit_row[12]:  # created_by_role
+                    visit['createdByRole'] = visit_row[12]
                 
                 if object_id not in visits_by_object:
                     visits_by_object[object_id] = []
@@ -332,8 +334,8 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                         cursor.execute('''
                             INSERT INTO t_p32730230_emergency_visit_trac.visits_v2 
                             (id, object_id, user_id, visit_date, visit_type, comment, created_by, created_at, is_locked,
-                             task_description, task_completed, task_completed_by, task_completed_at, is_archived)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, %s, %s, %s, %s, %s, %s)
+                             task_description, task_completed, task_completed_by, task_completed_at, is_archived, created_by_role)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, %s, %s, %s, %s, %s, %s, %s)
                         ''', (
                             visit_id,
                             obj_id,
@@ -347,7 +349,8 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                             visit.get('taskCompleted'),
                             visit.get('taskCompletedBy'),
                             visit.get('taskCompletedAt'),
-                            is_deleted
+                            is_deleted,
+                            visit.get('createdByRole')
                         ))
                     else:
                         # Обновляем визит если он уже существует (для завершения задач и удаления)
@@ -355,7 +358,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                         cursor.execute('''
                             UPDATE t_p32730230_emergency_visit_trac.visits_v2
                             SET comment = %s, task_completed = %s, task_completed_by = %s, 
-                                task_completed_at = %s, is_archived = %s
+                                task_completed_at = %s, is_archived = %s, created_by_role = %s
                             WHERE id = %s
                         ''', (
                             visit.get('comment', ''),
@@ -363,6 +366,7 @@ def handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                             visit.get('taskCompletedBy'),
                             visit.get('taskCompletedAt'),
                             is_deleted,
+                            visit.get('createdByRole'),
                             visit_id
                         ))
                     
