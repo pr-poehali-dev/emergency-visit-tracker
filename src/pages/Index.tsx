@@ -28,6 +28,7 @@ export interface Visit {
   createdByRole?: 'technician' | 'director' | 'supervisor';
   createdAt: string;
   taskDescription?: string;
+  taskRecipient?: 'technician' | 'director';
   taskCompleted?: boolean;
   taskCompletedBy?: string;
   taskCompletedAt?: string;

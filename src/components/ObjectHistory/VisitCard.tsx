@@ -89,7 +89,12 @@ export default function VisitCard({
                     ? 'text-amber-400' 
                     : 'text-slate-400'
                 }`}>
-                  Задача от {visit.createdByRole === 'director' ? 'директора' : visit.createdByRole === 'supervisor' ? `руководителя (${visit.createdBy})` : visit.createdBy}:
+                  Задача от {visit.createdByRole === 'director' ? 'директора' : visit.createdByRole === 'supervisor' ? `руководителя (${visit.createdBy})` : visit.createdBy}
+                  {visit.taskRecipient && (
+                    <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-slate-800 border border-slate-600">
+                      для {visit.taskRecipient === 'director' ? 'директора' : 'техников'}
+                    </span>
+                  )}:
                 </p>
                 <p className="text-slate-300">{visit.taskDescription}</p>
               </div>
@@ -114,14 +119,30 @@ export default function VisitCard({
               </Button>
             </div>
           ) : visit.type === 'task' && !visit.taskCompleted ? (
-            <Button
-              size="sm"
-              onClick={() => onEditClick(visit.id)}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Icon name="CheckCircle" size={16} className="mr-1" />
-              Выполнить задачу
-            </Button>
+            (visit.taskRecipient === 'director' && userRole === 'director') || 
+            (visit.taskRecipient === 'technician' && (userRole === 'technician' || userRole === 'supervisor')) || 
+            !visit.taskRecipient ? (
+              <Button
+                size="sm"
+                onClick={() => onEditClick(visit.id)}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Icon name="CheckCircle" size={16} className="mr-1" />
+                Выполнить задачу
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Icon name="Lock" size={16} className="text-amber-500" />
+                <span className="text-xs text-amber-400">
+                  {visit.taskRecipient === 'director' ? 'Только для директора' : 'Только для техников'}
+                </span>
+              </div>
+            )
+          ) : visit.type === 'task' && visit.taskCompleted ? (
+            <div className="flex items-center gap-2">
+              <Icon name="CheckCircle" size={16} className="text-green-500" />
+              <span className="text-xs text-green-400">Выполнена</span>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <Icon name="Lock" size={16} className="text-slate-500" />
@@ -176,7 +197,11 @@ export default function VisitCard({
           </div>
         )}
 
-        {editingVisit === visit.id && visit.type === 'task' && !visit.taskCompleted && userRole !== 'director' && (
+        {editingVisit === visit.id && visit.type === 'task' && !visit.taskCompleted && (
+          (visit.taskRecipient === 'director' && userRole === 'director') || 
+          (visit.taskRecipient === 'technician' && (userRole === 'technician' || userRole === 'supervisor')) || 
+          (!visit.taskRecipient && userRole !== 'director')
+        ) && (
           <div className="mt-4 space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
             <h4 className="text-white font-medium flex items-center gap-2">
               <Icon name="ClipboardCheck" size={18} className="text-green-400" />
