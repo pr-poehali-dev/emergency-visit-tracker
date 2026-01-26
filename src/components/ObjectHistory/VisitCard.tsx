@@ -130,6 +130,27 @@ export default function VisitCard({
                 );
               }
               
+              // Директор может удалить любую задачу
+              if (userRole === 'director') {
+                return (
+                  <div className="flex items-center gap-2">
+                    <Icon name="Lock" size={16} className="text-amber-500" />
+                    <span className="text-xs text-amber-400 mr-3">
+                      {visit.taskRecipient === 'director' ? 'Только для директора' : 'Только для техников'}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditClick(editingVisit === visit.id ? null : visit.id)}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      <Icon name="Trash2" size={16} className="mr-1" />
+                      Удалить
+                    </Button>
+                  </div>
+                );
+              }
+              
               return (
                 <div className="flex items-center gap-2">
                   <Icon name="Lock" size={16} className="text-amber-500" />
