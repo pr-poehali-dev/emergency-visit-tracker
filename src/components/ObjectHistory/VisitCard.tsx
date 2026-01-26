@@ -107,25 +107,47 @@ export default function VisitCard({
           </div>
 
           {visit.type === 'task' && !visit.taskCompleted ? (
-            (visit.taskRecipient === 'director' && userRole === 'director') || 
-            (visit.taskRecipient === 'technician' && (userRole === 'technician' || userRole === 'supervisor')) || 
-            !visit.taskRecipient ? (
-              <Button
-                size="sm"
-                onClick={() => onEditClick(visit.id)}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Icon name="CheckCircle" size={16} className="mr-1" />
-                Выполнить задачу
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Icon name="Lock" size={16} className="text-amber-500" />
-                <span className="text-xs text-amber-400">
-                  {visit.taskRecipient === 'director' ? 'Только для директора' : 'Только для техников'}
-                </span>
-              </div>
-            )
+            (() => {
+              // Логируем для отладки
+              console.log('🔍 Задача:', {
+                id: visit.id,
+                taskRecipient: visit.taskRecipient,
+                createdByRole: visit.createdByRole,
+                userRole,
+                taskDescription: visit.taskDescription?.substring(0, 50)
+              });
+              
+              // Определяем кто может закрыть задачу
+              const canComplete = visit.taskRecipient === 'director' 
+                ? userRole === 'director'
+                : visit.taskRecipient === 'technician'
+                ? (userRole === 'technician' || userRole === 'supervisor')
+                : !visit.taskRecipient
+                ? (userRole === 'technician' || userRole === 'supervisor')
+                : false;
+              
+              if (canComplete) {
+                return (
+                  <Button
+                    size="sm"
+                    onClick={() => onEditClick(visit.id)}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Icon name="CheckCircle" size={16} className="mr-1" />
+                    Выполнить задачу
+                  </Button>
+                );
+              }
+              
+              return (
+                <div className="flex items-center gap-2">
+                  <Icon name="Lock" size={16} className="text-amber-500" />
+                  <span className="text-xs text-amber-400">
+                    {visit.taskRecipient === 'director' ? 'Только для директора' : 'Только для техников'}
+                  </span>
+                </div>
+              );
+            })()
           ) : visit.type === 'task' && visit.taskCompleted ? (
             <div className="flex items-center gap-2">
               <Icon name="CheckCircle" size={16} className="text-green-500" />

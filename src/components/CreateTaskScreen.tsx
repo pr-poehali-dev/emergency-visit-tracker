@@ -92,6 +92,13 @@ export default function CreateTaskScreen({
       taskCompleted: false,
       smsNotifications: [] as any[]
     };
+    
+    console.log('🆕 Создаём задачу:', {
+      taskRecipient,
+      createdBy: userName,
+      createdByRole: userRole,
+      taskDescription
+    });
 
     const updatedObject = {
       ...object,
