@@ -352,10 +352,18 @@ function Index() {
           setObjects(serverObjects);
           setUsers(serverUsers);
           
+          // Обновляем выбранный объект если он открыт
+          if (selectedObject) {
+            const updatedSelectedObject = serverObjects.find(obj => obj.id === selectedObject.id);
+            if (updatedSelectedObject) {
+              setSelectedObject(updatedSelectedObject);
+            }
+          }
+          
           localStorage.setItem('mchs_objects', JSON.stringify(serverObjects));
           localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
           
-          console.log('✅ Синхронизация завершена:', serverObjects.length, 'объектов');
+          console.log('✅ Синхронизация завершена:', serverObjects.length, 'объектов,', serverUsers.length, 'пользователей');
           alert('✅ Данные синхронизированы с сервером');
         }
       } else {
