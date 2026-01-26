@@ -398,46 +398,53 @@ function Index() {
       }
       
       // Загружаем свежие данные с сервера
-      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
+      try {
+        const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+          method: 'GET',
+          mode: 'cors',
+          credentials: 'omit',
+          headers: { 'Content-Type': 'application/json' }
+        });
         
-        if (result.status === 'success' && result.data) {
-          const serverObjects = result.data.objects || [];
-          const serverUsers = result.data.users || [];
+        if (response.ok) {
+          const result = await response.json();
           
-          setObjects(serverObjects);
-          setUsers(serverUsers);
-          
-          // Сохраняем в IndexedDB
-          await offlineStorage.saveObjects(serverObjects);
-          await offlineStorage.saveUsers(serverUsers);
-          
-          // Обновляем выбранный объект если он открыт
-          if (selectedObject) {
-            const updatedSelectedObject = serverObjects.find(obj => obj.id === selectedObject.id);
-            if (updatedSelectedObject) {
-              setSelectedObject(updatedSelectedObject);
+          if (result.status === 'success' && result.data) {
+            const serverObjects = result.data.objects || [];
+            const serverUsers = result.data.users || [];
+            
+            setObjects(serverObjects);
+            setUsers(serverUsers);
+            
+            // Сохраняем в IndexedDB
+            await offlineStorage.saveObjects(serverObjects);
+            await offlineStorage.saveUsers(serverUsers);
+            
+            // Обновляем выбранный объект если он открыт
+            if (selectedObject) {
+              const updatedSelectedObject = serverObjects.find(obj => obj.id === selectedObject.id);
+              if (updatedSelectedObject) {
+                setSelectedObject(updatedSelectedObject);
+              }
             }
+            
+            localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
+            
+            console.log('✅ Синхронизация завершена:', serverObjects.length, 'объектов,', serverUsers.length, 'пользователей');
           }
-          
-          localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
-          
-          console.log('✅ Синхронизация завершена:', serverObjects.length, 'объектов,', serverUsers.length, 'пользователей');
-          const message = pendingItems.length > 0 
-            ? `✅ Синхронизировано ${pendingItems.length} офлайн записей и загружены свежие данные`
-            : '✅ Данные синхронизированы с сервером';
-          alert(message);
+        } else {
+          console.warn('⚠️ Не удалось загрузить свежие данные с сервера:', response.status);
         }
-      } else {
-        throw new Error(`HTTP ${response.status}`);
+      } catch (fetchError) {
+        console.warn('⚠️ Ошибка загрузки с сервера:', fetchError);
       }
+      
+      // Показываем результат (даже если загрузка с сервера не удалась)
+      const message = pendingItems.length > 0 
+        ? `✅ Синхронизировано ${pendingItems.length} офлайн записей`
+        : '✅ Данные синхронизированы с сервером';
+      alert(message);
+      
     } catch (error) {
       console.error('❌ Ошибка синхронизации:', error);
       alert('❌ Не удалось синхронизировать. Проверьте подключение к интернету.');

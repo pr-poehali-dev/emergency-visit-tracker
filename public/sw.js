@@ -1,27 +1,19 @@
-const CACHE_NAME = 'mchs-visits-v3';
-const urlsToCache = [
-  '/',
-  '/manifest.json'
-];
+const CACHE_NAME = 'mchs-visits-v4';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(urlsToCache).catch((error) => {
-          console.error('Cache addAll failed:', error);
-        });
-      })
-  );
+  console.log('[SW] Установка Service Worker v4');
+  // Не кэшируем ничего при установке - будем кэшировать по мере запросов
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Активация Service Worker v4');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('[SW] Удаление старого кэша:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -46,9 +38,11 @@ self.addEventListener('fetch', (event) => {
       caches.match(event.request)
         .then((response) => {
           if (response) {
+            console.log('[SW] Из кэша:', url.pathname);
             return response;
           }
           
+          console.log('[SW] Загрузка из сети:', url.pathname);
           return fetch(event.request).then((response) => {
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
@@ -58,13 +52,32 @@ self.addEventListener('fetch', (event) => {
             
             caches.open(CACHE_NAME)
               .then((cache) => {
+                console.log('[SW] Кэширую:', url.pathname);
                 cache.put(event.request, responseToCache);
               });
             
             return response;
-          }).catch(() => {
+          }).catch((error) => {
+            console.log('[SW] Ошибка загрузки, пытаюсь взять из кэша:', url.pathname, error);
             // Если офлайн - возвращаем базовую страницу из кэша
-            return caches.match('/');
+            return caches.match('/').then((cachedIndex) => {
+              if (cachedIndex) {
+                console.log('[SW] Возвращаю index.html из кэша');
+                return cachedIndex;
+              }
+              // Пытаемся вернуть офлайн страницу
+              return caches.match('/offline.html').then((offlinePage) => {
+                if (offlinePage) {
+                  console.log('[SW] Возвращаю offline.html');
+                  return offlinePage;
+                }
+                console.error('[SW] Нет кэшированных страниц!');
+                return new Response('Офлайн - нет кэшированных данных', {
+                  status: 503,
+                  statusText: 'Service Unavailable'
+                });
+              });
+            });
           });
         })
     );
