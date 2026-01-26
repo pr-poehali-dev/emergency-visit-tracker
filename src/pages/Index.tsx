@@ -155,7 +155,16 @@ function Index() {
       }
     } catch (error) {
       console.error('❌ Ошибка сохранения пользователей:', error);
-      alert('❌ Не удалось сохранить пользователя на сервер. Проверьте интернет.');
+      console.warn('⚠️ Сохранение пользователей только локально (офлайн режим)');
+      
+      // В офлайн режиме сохраняем в localStorage
+      try {
+        localStorage.setItem('mchs_users', JSON.stringify(newUsers));
+        console.log('✅ Пользователи сохранены локально (офлайн)');
+      } catch (storageError) {
+        console.error('❌ Ошибка сохранения пользователей в localStorage:', storageError);
+        alert('❌ Не удалось сохранить пользователей. Освободите место в хранилище.');
+      }
     }
   };
 
@@ -260,7 +269,16 @@ function Index() {
       }
     } catch (error) {
       console.error('❌ Ошибка автосохранения:', error);
-      alert('❌ Не удалось сохранить на сервер. Проверьте интернет.');
+      console.warn('⚠️ Сохранение только локально (офлайн режим)');
+      
+      // В офлайн режиме сохраняем в localStorage
+      try {
+        localStorage.setItem('mchs_objects', JSON.stringify(newObjects));
+        console.log('✅ Данные сохранены локально (офлайн)');
+      } catch (storageError) {
+        console.error('❌ Ошибка сохранения в localStorage:', storageError);
+        alert('❌ Не удалось сохранить данные. Освободите место в хранилище.');
+      }
     }
   };
 

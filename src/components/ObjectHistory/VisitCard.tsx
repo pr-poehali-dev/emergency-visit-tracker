@@ -200,7 +200,7 @@ export default function VisitCard({
         {editingVisit === visit.id && visit.type === 'task' && !visit.taskCompleted && (
           (visit.taskRecipient === 'director' && userRole === 'director') || 
           (visit.taskRecipient === 'technician' && (userRole === 'technician' || userRole === 'supervisor')) || 
-          (!visit.taskRecipient && userRole !== 'director')
+          (!visit.taskRecipient && (userRole === 'technician' || userRole === 'supervisor'))
         ) && (
           <div className="mt-4 space-y-4 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
             <h4 className="text-white font-medium flex items-center gap-2">
