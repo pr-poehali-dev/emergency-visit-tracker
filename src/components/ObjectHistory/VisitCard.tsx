@@ -108,15 +108,6 @@ export default function VisitCard({
 
           {visit.type === 'task' && !visit.taskCompleted ? (
             (() => {
-              // Логируем для отладки
-              console.log('🔍 Задача:', {
-                id: visit.id,
-                taskRecipient: visit.taskRecipient,
-                createdByRole: visit.createdByRole,
-                userRole,
-                taskDescription: visit.taskDescription?.substring(0, 50)
-              });
-              
               // Определяем кто может закрыть задачу
               const canComplete = visit.taskRecipient === 'director' 
                 ? userRole === 'director'
