@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
+import SyncButton from '@/components/SyncButton';
 import { api } from '@/lib/api';
 import type { SiteObject, Visit } from '@/pages/Index';
 
@@ -12,13 +13,15 @@ interface CreateVisitScreenProps {
   userName: string;
   onBack: () => void;
   onSave: (visit: Omit<Visit, 'id' | 'createdAt'>) => void;
+  onSync?: () => Promise<void>;
 }
 
 export default function CreateVisitScreen({ 
   object, 
   userName,
   onBack, 
-  onSave 
+  onSave,
+  onSync
 }: CreateVisitScreenProps) {
   const [visitType, setVisitType] = useState<'planned' | 'unplanned' | null>(null);
   const [comment, setComment] = useState('');
@@ -138,14 +141,17 @@ export default function CreateVisitScreen({
       <div className="relative z-10">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
-          <Button 
-            variant="ghost" 
-            onClick={onBack}
-            className="text-slate-300 hover:text-white hover:bg-slate-800 mb-4"
-          >
-            <Icon name="ArrowLeft" size={18} className="mr-2" />
-            Назад
-          </Button>
+          <div className="flex items-center justify-between mb-4">
+            <Button 
+              variant="ghost" 
+              onClick={onBack}
+              className="text-slate-300 hover:text-white hover:bg-slate-800"
+            >
+              <Icon name="ArrowLeft" size={18} className="mr-2" />
+              Назад
+            </Button>
+            {onSync && <SyncButton onSync={onSync} />}
+          </div>
           
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Новое посещение</h1>

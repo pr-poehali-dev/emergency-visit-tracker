@@ -13,6 +13,7 @@ interface ObjectsListScreenProps {
   userName: string;
   onSelectObject: (obj: SiteObject) => void;
   onOpenDirectorPanel: () => void;
+  onSync?: () => Promise<void>;
 }
 
 export default function ObjectsListScreen({ 
@@ -20,13 +21,31 @@ export default function ObjectsListScreen({
   userRole, 
   userName,
   onSelectObject,
-  onOpenDirectorPanel 
+  onOpenDirectorPanel,
+  onSync
 }: ObjectsListScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string>('');
 
   const handleSync = async () => {
+    if (onSync) {
+      setIsSyncing(true);
+      setSyncStatus('Синхронизация...');
+      
+      try {
+        await onSync();
+        setSyncStatus('✓ Синхронизация завершена');
+        setTimeout(() => setSyncStatus(''), 3000);
+      } catch (error: any) {
+        setSyncStatus(`✗ Ошибка: ${error.message}`);
+        setTimeout(() => setSyncStatus(''), 5000);
+      } finally {
+        setIsSyncing(false);
+      }
+      return;
+    }
+
     setIsSyncing(true);
     setSyncStatus('Синхронизация...');
     

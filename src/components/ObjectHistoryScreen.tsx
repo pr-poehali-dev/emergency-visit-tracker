@@ -14,6 +14,7 @@ interface ObjectHistoryScreenProps {
   onCreateVisit: () => void;
   onCreateTask: () => void;
   onUpdateObject: (updatedObject: SiteObject) => void;
+  onSync?: () => Promise<void>;
 }
 
 export default function ObjectHistoryScreen({ 
@@ -23,7 +24,8 @@ export default function ObjectHistoryScreen({
   onBack, 
   onCreateVisit,
   onCreateTask,
-  onUpdateObject
+  onUpdateObject,
+  onSync
 }: ObjectHistoryScreenProps) {
   console.log('🏢 ObjectHistoryScreen render:', object?.name, 'visits:', object?.visits?.length);
   
@@ -247,6 +249,7 @@ export default function ObjectHistoryScreen({
             onBack={onBack}
             onCreateVisit={onCreateVisit}
             onCreateTask={onCreateTask}
+            onSync={onSync}
           />
 
           {object.visits.filter(v => !v.deleted).length === 0 ? (

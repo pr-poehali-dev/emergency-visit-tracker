@@ -6,6 +6,7 @@ import CreateVisitScreen from '@/components/CreateVisitScreen';
 import CreateTaskScreen from '@/components/CreateTaskScreen';
 import InstallationObjectScreen from '@/components/InstallationObjectScreen';
 import DirectorPanel from '@/components/DirectorPanel';
+import SyncButton from '@/components/SyncButton';
 
 type Screen = 'login' | 'objects' | 'history' | 'create' | 'director' | 'createTask' | 'installation';
 type UserRole = 'technician' | 'director' | 'supervisor' | null;
@@ -325,6 +326,41 @@ function Index() {
     setCurrentScreen('director');
   };
 
+  const handleSync = async () => {
+    console.log('🔄 Ручная синхронизация...');
+    try {
+      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.data) {
+          const serverObjects = result.data.objects || [];
+          const serverUsers = result.data.users || [];
+          
+          setObjects(serverObjects);
+          setUsers(serverUsers);
+          
+          localStorage.setItem('mchs_objects', JSON.stringify(serverObjects));
+          localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
+          
+          console.log('✅ Синхронизация завершена:', serverObjects.length, 'объектов');
+          alert('✅ Данные синхронизированы с сервером');
+        }
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка синхронизации:', error);
+      alert('❌ Не удалось синхронизировать. Проверьте подключение к интернету.');
+    }
+  };
+
   const handleSaveVisit = async (visit: Omit<Visit, 'id' | 'createdAt'>) => {
     if (!selectedObject) return;
 
@@ -365,6 +401,7 @@ function Index() {
           userName={userName}
           onSelectObject={handleSelectObject}
           onOpenDirectorPanel={handleOpenDirectorPanel}
+          onSync={handleSync}
         />
       )}
       
@@ -376,6 +413,7 @@ function Index() {
           onBack={handleBackToObjects}
           onCreateVisit={handleCreateVisit}
           onCreateTask={handleCreateTask}
+          onSync={handleSync}
           onUpdateObject={async (updatedObject) => {
             console.log('ObjectHistoryScreen onUpdateObject called with:', updatedObject);
             const updatedObjects = objects.map(obj => 
@@ -395,6 +433,7 @@ function Index() {
           userName={userName}
           onBack={handleBackToHistory}
           onSave={handleSaveVisit}
+          onSync={handleSync}
         />
       )}
       
@@ -404,6 +443,7 @@ function Index() {
           userName={userName}
           userRole={userRole}
           onBack={handleBackToHistory}
+          onSync={handleSync}
           onSave={async (updatedObject) => {
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj

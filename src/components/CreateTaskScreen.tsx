@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
+import SyncButton from '@/components/SyncButton';
 import type { SiteObject } from '@/pages/Index';
 import heic2any from 'heic2any';
 
@@ -12,6 +13,7 @@ interface CreateTaskScreenProps {
   userRole: 'technician' | 'director' | 'supervisor' | null;
   onBack: () => void;
   onSave: (updatedObject: SiteObject) => void;
+  onSync?: () => Promise<void>;
 }
 
 export default function CreateTaskScreen({ 
@@ -19,7 +21,8 @@ export default function CreateTaskScreen({
   userName, 
   userRole,
   onBack, 
-  onSave 
+  onSave,
+  onSync
 }: CreateTaskScreenProps) {
   const [taskDescription, setTaskDescription] = useState('');
   const [taskRecipient, setTaskRecipient] = useState<'technician' | 'director'>('technician');
@@ -138,14 +141,17 @@ export default function CreateTaskScreen({
   return (
     <div className="min-h-screen p-4 md:p-6">
       <div className="max-w-2xl mx-auto animate-fade-in">
-        <Button 
-          variant="ghost" 
-          onClick={onBack}
-          className="text-slate-300 hover:text-white hover:bg-slate-800 mb-4"
-        >
-          <Icon name="ArrowLeft" size={18} className="mr-2" />
-          Назад к объекту
-        </Button>
+        <div className="flex items-center justify-between mb-4">
+          <Button 
+            variant="ghost" 
+            onClick={onBack}
+            className="text-slate-300 hover:text-white hover:bg-slate-800"
+          >
+            <Icon name="ArrowLeft" size={18} className="mr-2" />
+            Назад к объекту
+          </Button>
+          {onSync && <SyncButton onSync={onSync} />}
+        </div>
 
         <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm shadow-2xl">
           <CardHeader>

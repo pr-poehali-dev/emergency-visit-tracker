@@ -106,19 +106,7 @@ export default function VisitCard({
             </p>
           </div>
 
-          {userRole === 'director' ? (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onEditClick(editingVisit === visit.id ? null : visit.id)}
-                className="text-slate-400 hover:text-white"
-              >
-                <Icon name="Edit" size={16} className="mr-1" />
-                Редактировать
-              </Button>
-            </div>
-          ) : visit.type === 'task' && !visit.taskCompleted ? (
+          {visit.type === 'task' && !visit.taskCompleted ? (
             (visit.taskRecipient === 'director' && userRole === 'director') || 
             (visit.taskRecipient === 'technician' && (userRole === 'technician' || userRole === 'supervisor')) || 
             !visit.taskRecipient ? (
@@ -142,6 +130,18 @@ export default function VisitCard({
             <div className="flex items-center gap-2">
               <Icon name="CheckCircle" size={16} className="text-green-500" />
               <span className="text-xs text-green-400">Выполнена</span>
+            </div>
+          ) : userRole === 'director' ? (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEditClick(editingVisit === visit.id ? null : visit.id)}
+                className="text-slate-400 hover:text-white"
+              >
+                <Icon name="Edit" size={16} className="mr-1" />
+                Редактировать
+              </Button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
