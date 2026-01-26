@@ -199,39 +199,47 @@ function Index() {
         
         setIsInitialized(true);
         
-        // Пытаемся загрузить с сервера
-        console.log('🔄 Автозагрузка данных с сервера...');
-        const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-          method: 'GET',
-          mode: 'cors',
-          credentials: 'omit',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          
-          if (result.status === 'success' && result.data) {
-            const serverObjects = result.data.objects || [];
-            const serverUsers = result.data.users || [];
+        // Пытаемся загрузить с сервера (только если есть интернет)
+        if (navigator.onLine) {
+          try {
+            console.log('🔄 Автозагрузка данных с сервера...');
+            const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+              method: 'GET',
+              mode: 'cors',
+              credentials: 'omit',
+              headers: { 'Content-Type': 'application/json' }
+            });
             
-            console.log('✅ Загружено с сервера:', serverObjects.length, 'объектов');
-            
-            // Сохраняем в IndexedDB
-            if (serverObjects.length > 0) {
-              await offlineStorage.saveObjects(serverObjects);
-              setObjects(serverObjects);
+            if (response.ok) {
+              const result = await response.json();
+              
+              if (result.status === 'success' && result.data) {
+                const serverObjects = result.data.objects || [];
+                const serverUsers = result.data.users || [];
+                
+                console.log('✅ Загружено с сервера:', serverObjects.length, 'объектов');
+                
+                // Сохраняем в IndexedDB
+                if (serverObjects.length > 0) {
+                  await offlineStorage.saveObjects(serverObjects);
+                  setObjects(serverObjects);
+                }
+                
+                if (serverUsers.length > 0) {
+                  await offlineStorage.saveUsers(serverUsers);
+                  setUsers(serverUsers);
+                  localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
+                }
+              }
             }
-            
-            if (serverUsers.length > 0) {
-              await offlineStorage.saveUsers(serverUsers);
-              setUsers(serverUsers);
-              localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
-            }
+          } catch (error) {
+            console.warn('⚠️ Не удалось загрузить с сервера, работаем офлайн:', error);
           }
+        } else {
+          console.log('📴 Нет интернета, работаем с локальными данными');
         }
       } catch (error) {
-        console.error('❌ Ошибка инициализации:', error);
+        console.error('❌ Ошибка инициализации IndexedDB:', error);
         setIsInitialized(true);
       }
     };
@@ -354,10 +362,14 @@ function Index() {
       
       // Синхронизируем очередь если есть данные
       if (pendingItems.length > 0) {
-        const pendingObjects = pendingItems.filter(item => item.type === 'object').map(item => item.data);
+        // Получаем текущие объекты из IndexedDB
+        const currentObjects = await offlineStorage.getObjects();
+        console.log('📂 Текущих объектов в IndexedDB:', currentObjects.length);
         
-        if (pendingObjects.length > 0) {
-          console.log('📤 Отправка офлайн данных на сервер:', pendingObjects.length);
+        // Отправляем ВСЕ текущие объекты (они уже содержат все изменения)
+        if (currentObjects.length > 0) {
+          console.log('📤 Отправка всех данных на сервер:', currentObjects.length, 'объектов');
+          console.log('📊 Пример объекта:', currentObjects[0]?.name, 'с', currentObjects[0]?.visits?.length, 'посещениями');
           
           const syncResponse = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
             method: 'POST',
@@ -366,15 +378,21 @@ function Index() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               action: 'sync',
-              objects: pendingObjects,
+              objects: currentObjects,
               users: []
             })
           });
           
           if (syncResponse.ok) {
+            const syncResult = await syncResponse.json();
+            console.log('✅ Результат синхронизации:', syncResult);
+            
             // Очищаем очередь после успешной синхронизации
             await offlineStorage.clearAllPendingSync();
-            console.log('✅ Офлайн данные синхронизированы');
+            console.log('✅ Очередь синхронизации очищена');
+          } else {
+            console.error('❌ Ошибка синхронизации:', syncResponse.status);
+            throw new Error(`Ошибка синхронизации: ${syncResponse.status}`);
           }
         }
       }
