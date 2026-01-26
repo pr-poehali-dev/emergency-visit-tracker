@@ -99,9 +99,13 @@ export default function CreateTaskScreen({
     };
 
     const users = localStorage.getItem('mchs_users');
+    console.log('📱 SMS отправка:', { taskRecipient, usersInStorage: !!users });
+    
     if (users) {
       try {
         const usersList = JSON.parse(users);
+        console.log('👥 Всего пользователей:', usersList.length);
+        
         const recipientPhones = usersList
           .filter((u: any) => {
             if (taskRecipient === 'director') {
@@ -112,7 +116,10 @@ export default function CreateTaskScreen({
           })
           .map((u: any) => u.phone);
         
+        console.log('📞 Телефоны получателей:', recipientPhones);
+        
         if (recipientPhones.length > 0) {
+          console.log('📤 Отправка SMS на:', recipientPhones);
           const response = await fetch('https://functions.poehali.dev/337019d5-dd82-4aaa-8118-0093926f6759', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -124,13 +131,19 @@ export default function CreateTaskScreen({
           });
           
           const result = await response.json();
+          console.log('✅ Результат SMS:', result);
+          
           if (result.status === 'success' && result.notifications) {
             newTask.smsNotifications = result.notifications;
           }
+        } else {
+          console.warn('⚠️ Нет телефонов для отправки SMS');
         }
       } catch (error) {
-        console.error('SMS notification error:', error);
+        console.error('❌ SMS notification error:', error);
       }
+    } else {
+      console.warn('⚠️ Пользователи не найдены в localStorage');
     }
 
     onSave(updatedObject);

@@ -200,17 +200,23 @@ function Index() {
             const serverUsers = result.data.users || [];
             
             console.log('✅ Загружено с сервера:', serverObjects.length, 'объектов');
-            console.log('📊 Пример объекта:', serverObjects[0]);
+            console.log('👥 Пользователей с сервера:', serverUsers.length);
+            if (serverObjects[0]) console.log('📊 Пример объекта:', serverObjects[0]);
             
-            // Если на сервере есть данные - используем их
+            // Всегда загружаем пользователей (даже если объектов нет)
+            if (serverUsers.length > 0) {
+              setUsers(serverUsers);
+              localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
+              console.log('✅ Пользователи обновлены в localStorage');
+            }
+            
+            // Загружаем объекты если есть
             if (serverObjects.length > 0) {
               setObjects(serverObjects);
-              setUsers(serverUsers);
-              
               localStorage.setItem('mchs_objects', JSON.stringify(serverObjects));
-              localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
+              console.log('✅ Объекты обновлены в localStorage');
             } else {
-              console.log('⚠️ На сервере нет данных, используем локальные если есть');
+              console.log('⚠️ На сервере нет объектов, используем локальные если есть');
             }
           }
         }

@@ -140,10 +140,26 @@ export default function VisitCard({
               );
             })()
           ) : visit.type === 'task' && visit.taskCompleted ? (
-            <div className="flex items-center gap-2">
-              <Icon name="CheckCircle" size={16} className="text-green-500" />
-              <span className="text-xs text-green-400">Выполнена</span>
-            </div>
+            userRole === 'director' ? (
+              <div className="flex items-center gap-2">
+                <Icon name="CheckCircle" size={16} className="text-green-500 mr-2" />
+                <span className="text-xs text-green-400 mr-3">Выполнена</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEditClick(editingVisit === visit.id ? null : visit.id)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <Icon name="Trash2" size={16} className="mr-1" />
+                  Удалить
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Icon name="CheckCircle" size={16} className="text-green-500" />
+                <span className="text-xs text-green-400">Выполнена</span>
+              </div>
+            )
           ) : userRole === 'director' ? (
             <div className="flex items-center gap-2">
               <Button
@@ -152,8 +168,8 @@ export default function VisitCard({
                 onClick={() => onEditClick(editingVisit === visit.id ? null : visit.id)}
                 className="text-slate-400 hover:text-white"
               >
-                <Icon name="Edit" size={16} className="mr-1" />
-                Редактировать
+                <Icon name="Trash2" size={16} className="mr-1" />
+                Удалить
               </Button>
             </div>
           ) : (
