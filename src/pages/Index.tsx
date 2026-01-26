@@ -7,6 +7,8 @@ import CreateTaskScreen from '@/components/CreateTaskScreen';
 import InstallationObjectScreen from '@/components/InstallationObjectScreen';
 import DirectorPanel from '@/components/DirectorPanel';
 import SyncButton from '@/components/SyncButton';
+import OfflineIndicator from '@/components/OfflineIndicator';
+import { offlineStorage } from '@/lib/offlineStorage';
 
 type Screen = 'login' | 'objects' | 'history' | 'create' | 'director' | 'createTask' | 'installation';
 type UserRole = 'technician' | 'director' | 'supervisor' | null;
@@ -169,21 +171,36 @@ function Index() {
     }
   };
 
-  const getInitialObjects = (): SiteObject[] => {
-    const saved = localStorage.getItem('mchs_objects');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return [];
-  };
+  const [objects, setObjects] = useState<SiteObject[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const [objects, setObjects] = useState<SiteObject[]>(getInitialObjects);
-
-  // АВТОЗАГРУЗКА данных с сервера при первом запуске
+  // ИНИЦИАЛИЗАЦИЯ и АВТОЗАГРУЗКА данных
   useEffect(() => {
-    const autoLoad = async () => {
-      console.log('🔄 Автозагрузка данных с сервера...');
+    const initAndLoad = async () => {
       try {
+        // Инициализируем IndexedDB
+        await offlineStorage.init();
+        console.log('✅ Offline storage готов');
+        
+        // Загружаем данные из IndexedDB
+        const cachedObjects = await offlineStorage.getObjects();
+        const cachedUsers = await offlineStorage.getUsers();
+        
+        if (cachedObjects.length > 0) {
+          setObjects(cachedObjects);
+          console.log('📂 Загружено из IndexedDB:', cachedObjects.length, 'объектов');
+        }
+        
+        if (cachedUsers.length > 0) {
+          setUsers(cachedUsers);
+          localStorage.setItem('mchs_users', JSON.stringify(cachedUsers));
+          console.log('👥 Загружено из IndexedDB:', cachedUsers.length, 'пользователей');
+        }
+        
+        setIsInitialized(true);
+        
+        // Пытаемся загрузить с сервера
+        console.log('🔄 Автозагрузка данных с сервера...');
         const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
           method: 'GET',
           mode: 'cors',
@@ -193,44 +210,46 @@ function Index() {
         
         if (response.ok) {
           const result = await response.json();
-          console.log('📦 Server response:', result);
           
           if (result.status === 'success' && result.data) {
             const serverObjects = result.data.objects || [];
             const serverUsers = result.data.users || [];
             
             console.log('✅ Загружено с сервера:', serverObjects.length, 'объектов');
-            console.log('👥 Пользователей с сервера:', serverUsers.length);
-            if (serverObjects[0]) console.log('📊 Пример объекта:', serverObjects[0]);
             
-            // Всегда загружаем пользователей (даже если объектов нет)
-            if (serverUsers.length > 0) {
-              setUsers(serverUsers);
-              localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
-              console.log('✅ Пользователи обновлены в localStorage');
+            // Сохраняем в IndexedDB
+            if (serverObjects.length > 0) {
+              await offlineStorage.saveObjects(serverObjects);
+              setObjects(serverObjects);
             }
             
-            // Загружаем объекты если есть
-            if (serverObjects.length > 0) {
-              setObjects(serverObjects);
-              localStorage.setItem('mchs_objects', JSON.stringify(serverObjects));
-              console.log('✅ Объекты обновлены в localStorage');
-            } else {
-              console.log('⚠️ На сервере нет объектов, используем локальные если есть');
+            if (serverUsers.length > 0) {
+              await offlineStorage.saveUsers(serverUsers);
+              setUsers(serverUsers);
+              localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
             }
           }
         }
       } catch (error) {
-        console.error('❌ Ошибка автозагрузки:', error);
+        console.error('❌ Ошибка инициализации:', error);
+        setIsInitialized(true);
       }
     };
     
-    autoLoad();
+    initAndLoad();
   }, []);
 
   const updateObjects = async (newObjects: SiteObject[]) => {
     console.log('✅ updateObjects called with:', newObjects.length, 'objects');
     setObjects(newObjects);
+    
+    // Сохраняем в IndexedDB сразу
+    try {
+      await offlineStorage.saveObjects(newObjects);
+      console.log('💾 Сохранено в IndexedDB');
+    } catch (error) {
+      console.error('❌ Ошибка сохранения в IndexedDB:', error);
+    }
     
     // Находим изменённые объекты (сравниваем с текущим состоянием)
     const changedObjects = newObjects.filter(newObj => {
@@ -240,13 +259,13 @@ function Index() {
     });
     
     if (changedObjects.length === 0) {
-      console.log('⏭️ Нет изменений, пропускаем сохранение');
+      console.log('⏭️ Нет изменений, пропускаем синхронизацию с сервером');
       return;
     }
     
-    console.log('🔄 Сохраняем', changedObjects.length, 'изменённых объектов');
+    console.log('🔄 Синхронизация', changedObjects.length, 'изменённых объектов');
     
-    // Сохраняем только изменённые объекты на сервер
+    // Пытаемся синхронизировать с сервером
     try {
       const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
         method: 'POST',
@@ -262,30 +281,24 @@ function Index() {
       
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Автосохранение успешно:', result);
-        
-        // Сохраняем в localStorage только если не переполнен
-        try {
-          localStorage.setItem('mchs_objects', JSON.stringify(newObjects));
-        } catch (storageError) {
-          console.warn('⚠️ LocalStorage переполнен, но данные сохранены на сервере');
-        }
+        console.log('✅ Синхронизация с сервером успешна:', result);
       } else {
-        console.error('❌ Ошибка автосохранения:', response.status);
+        console.error('❌ Ошибка синхронизации с сервером:', response.status);
         throw new Error(`HTTP ${response.status}`);
       }
     } catch (error) {
-      console.error('❌ Ошибка автосохранения:', error);
-      console.warn('⚠️ Сохранение только локально (офлайн режим)');
+      console.error('❌ Ошибка синхронизации с сервером:', error);
+      console.warn('⚠️ Работа в офлайн режиме - данные сохранены локально');
       
-      // В офлайн режиме сохраняем в localStorage
-      try {
-        localStorage.setItem('mchs_objects', JSON.stringify(newObjects));
-        console.log('✅ Данные сохранены локально (офлайн)');
-      } catch (storageError) {
-        console.error('❌ Ошибка сохранения в localStorage:', storageError);
-        alert('❌ Не удалось сохранить данные. Освободите место в хранилище.');
+      // Добавляем в очередь для последующей синхронизации
+      for (const obj of changedObjects) {
+        await offlineStorage.addPendingSync({
+          type: 'object',
+          data: obj
+        });
       }
+      
+      console.log('📝 Добавлено в очередь синхронизации:', changedObjects.length, 'объектов');
     }
   };
 
@@ -335,6 +348,38 @@ function Index() {
   const handleSync = async () => {
     console.log('🔄 Ручная синхронизация...');
     try {
+      // Проверяем очередь офлайн данных
+      const pendingItems = await offlineStorage.getPendingSync();
+      console.log('📋 В очереди синхронизации:', pendingItems.length, 'элементов');
+      
+      // Синхронизируем очередь если есть данные
+      if (pendingItems.length > 0) {
+        const pendingObjects = pendingItems.filter(item => item.type === 'object').map(item => item.data);
+        
+        if (pendingObjects.length > 0) {
+          console.log('📤 Отправка офлайн данных на сервер:', pendingObjects.length);
+          
+          const syncResponse = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'omit',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'sync',
+              objects: pendingObjects,
+              users: []
+            })
+          });
+          
+          if (syncResponse.ok) {
+            // Очищаем очередь после успешной синхронизации
+            await offlineStorage.clearAllPendingSync();
+            console.log('✅ Офлайн данные синхронизированы');
+          }
+        }
+      }
+      
+      // Загружаем свежие данные с сервера
       const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
         method: 'GET',
         mode: 'cors',
@@ -352,6 +397,10 @@ function Index() {
           setObjects(serverObjects);
           setUsers(serverUsers);
           
+          // Сохраняем в IndexedDB
+          await offlineStorage.saveObjects(serverObjects);
+          await offlineStorage.saveUsers(serverUsers);
+          
           // Обновляем выбранный объект если он открыт
           if (selectedObject) {
             const updatedSelectedObject = serverObjects.find(obj => obj.id === selectedObject.id);
@@ -360,11 +409,13 @@ function Index() {
             }
           }
           
-          localStorage.setItem('mchs_objects', JSON.stringify(serverObjects));
           localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
           
           console.log('✅ Синхронизация завершена:', serverObjects.length, 'объектов,', serverUsers.length, 'пользователей');
-          alert('✅ Данные синхронизированы с сервером');
+          const message = pendingItems.length > 0 
+            ? `✅ Синхронизировано ${pendingItems.length} офлайн записей и загружены свежие данные`
+            : '✅ Данные синхронизированы с сервером';
+          alert(message);
         }
       } else {
         throw new Error(`HTTP ${response.status}`);
@@ -406,6 +457,7 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <OfflineIndicator />
       {currentScreen === 'login' && <LoginScreen onLogin={handleLogin} />}
       
       {currentScreen === 'objects' && (
