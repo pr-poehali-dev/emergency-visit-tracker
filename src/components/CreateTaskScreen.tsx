@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
-import SyncButton from '@/components/SyncButton';
 import type { SiteObject } from '@/pages/Index';
 import heic2any from 'heic2any';
 
@@ -13,7 +12,6 @@ interface CreateTaskScreenProps {
   userRole: 'technician' | 'director' | 'supervisor' | null;
   onBack: () => void;
   onSave: (updatedObject: SiteObject) => void;
-  onSync?: () => Promise<void>;
 }
 
 export default function CreateTaskScreen({ 
@@ -21,8 +19,7 @@ export default function CreateTaskScreen({
   userName, 
   userRole,
   onBack, 
-  onSave,
-  onSync
+  onSave
 }: CreateTaskScreenProps) {
   const [taskDescription, setTaskDescription] = useState('');
   const [taskRecipient, setTaskRecipient] = useState<'technician' | 'director'>('technician');
@@ -163,7 +160,6 @@ export default function CreateTaskScreen({
             <Icon name="ArrowLeft" size={18} className="mr-2" />
             Назад к объекту
           </Button>
-          {onSync && <SyncButton onSync={onSync} />}
         </div>
 
         <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm shadow-2xl">

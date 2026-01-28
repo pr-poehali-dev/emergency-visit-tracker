@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import LoginScreen from '@/components/LoginScreen';
 import ObjectsListScreen from '@/components/ObjectsListScreen';
 import ObjectHistoryScreen from '@/components/ObjectHistoryScreen';
@@ -6,9 +6,6 @@ import CreateVisitScreen from '@/components/CreateVisitScreen';
 import CreateTaskScreen from '@/components/CreateTaskScreen';
 import InstallationObjectScreen from '@/components/InstallationObjectScreen';
 import DirectorPanel from '@/components/DirectorPanel';
-import SyncButton from '@/components/SyncButton';
-import OfflineIndicator from '@/components/OfflineIndicator';
-import { offlineStorage } from '@/lib/offlineStorage';
 
 type Screen = 'login' | 'objects' | 'history' | 'create' | 'director' | 'createTask' | 'installation';
 type UserRole = 'technician' | 'director' | 'supervisor' | null;
@@ -172,145 +169,12 @@ function Index() {
   };
 
   const [objects, setObjects] = useState<SiteObject[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  // ИНИЦИАЛИЗАЦИЯ и АВТОЗАГРУЗКА данных
-  useEffect(() => {
-    const initAndLoad = async () => {
-      try {
-        // Инициализируем IndexedDB
-        await offlineStorage.init();
-        console.log('✅ Offline storage готов');
-        
-        // Загружаем данные из IndexedDB
-        const cachedObjects = await offlineStorage.getObjects();
-        const cachedUsers = await offlineStorage.getUsers();
-        
-        if (cachedObjects.length > 0) {
-          setObjects(cachedObjects);
-          console.log('📂 Загружено из IndexedDB:', cachedObjects.length, 'объектов');
-        }
-        
-        if (cachedUsers.length > 0) {
-          setUsers(cachedUsers);
-          localStorage.setItem('mchs_users', JSON.stringify(cachedUsers));
-          console.log('👥 Загружено из IndexedDB:', cachedUsers.length, 'пользователей');
-        }
-        
-        setIsInitialized(true);
-        
-        // Пытаемся загрузить с сервера (только если есть интернет)
-        if (navigator.onLine) {
-          try {
-            console.log('🔄 Автозагрузка данных с сервера...');
-            const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-              method: 'GET',
-              mode: 'cors',
-              credentials: 'omit',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            
-            if (response.ok) {
-              const result = await response.json();
-              
-              if (result.status === 'success' && result.data) {
-                const serverObjects = result.data.objects || [];
-                const serverUsers = result.data.users || [];
-                
-                console.log('✅ Загружено с сервера:', serverObjects.length, 'объектов');
-                
-                // Сохраняем в IndexedDB
-                if (serverObjects.length > 0) {
-                  await offlineStorage.saveObjects(serverObjects);
-                  setObjects(serverObjects);
-                }
-                
-                if (serverUsers.length > 0) {
-                  await offlineStorage.saveUsers(serverUsers);
-                  setUsers(serverUsers);
-                  localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
-                }
-              }
-            }
-          } catch (error) {
-            console.warn('⚠️ Не удалось загрузить с сервера, работаем офлайн:', error);
-          }
-        } else {
-          console.log('📴 Нет интернета, работаем с локальными данными');
-        }
-      } catch (error) {
-        console.error('❌ Ошибка инициализации IndexedDB:', error);
-        setIsInitialized(true);
-      }
-    };
-    
-    initAndLoad();
-  }, []);
-
-  const updateObjects = async (newObjects: SiteObject[]) => {
+  const updateObjects = (newObjects: SiteObject[]) => {
     console.log('✅ updateObjects called with:', newObjects.length, 'objects');
     setObjects(newObjects);
-    
-    // Сохраняем в IndexedDB сразу
-    try {
-      await offlineStorage.saveObjects(newObjects);
-      console.log('💾 Сохранено в IndexedDB');
-    } catch (error) {
-      console.error('❌ Ошибка сохранения в IndexedDB:', error);
-    }
-    
-    // Находим изменённые объекты (сравниваем с текущим состоянием)
-    const changedObjects = newObjects.filter(newObj => {
-      const oldObj = objects.find(o => o.id === newObj.id);
-      if (!oldObj) return true; // Новый объект
-      return JSON.stringify(oldObj) !== JSON.stringify(newObj); // Изменён
-    });
-    
-    if (changedObjects.length === 0) {
-      console.log('⏭️ Нет изменений, пропускаем синхронизацию с сервером');
-      return;
-    }
-    
-    console.log('🔄 Синхронизация', changedObjects.length, 'изменённых объектов');
-    
-    // Пытаемся синхронизировать с сервером
-    try {
-      const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-        method: 'POST',
-        mode: 'cors',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'sync',
-          objects: changedObjects,
-          users: []
-        })
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Синхронизация с сервером успешна:', result);
-      } else {
-        console.error('❌ Ошибка синхронизации с сервером:', response.status);
-        throw new Error(`HTTP ${response.status}`);
-      }
-    } catch (error) {
-      console.error('❌ Ошибка синхронизации с сервером:', error);
-      console.warn('⚠️ Работа в офлайн режиме - данные сохранены локально');
-      
-      // Добавляем в очередь для последующей синхронизации
-      for (const obj of changedObjects) {
-        await offlineStorage.addPendingSync({
-          type: 'object',
-          data: obj
-        });
-      }
-      
-      console.log('📝 Добавлено в очередь синхронизации:', changedObjects.length, 'объектов');
-    }
+    localStorage.setItem('mchs_objects', JSON.stringify(newObjects));
   };
-
-  // Удалён автоматический useEffect для localStorage - теперь сохранение идёт через updateObjects на сервер
 
   const handleLogin = (role: UserRole, name: string) => {
     setUserRole(role);
@@ -353,136 +217,34 @@ function Index() {
     setCurrentScreen('director');
   };
 
-  const handleSync = async () => {
-    console.log('🔄 Ручная синхронизация...');
-    try {
-      // Проверяем очередь офлайн данных
-      const pendingItems = await offlineStorage.getPendingSync();
-      console.log('📋 В очереди синхронизации:', pendingItems.length, 'элементов');
-      
-      // Синхронизируем очередь если есть данные
-      if (pendingItems.length > 0) {
-        // Получаем текущие объекты из IndexedDB
-        const currentObjects = await offlineStorage.getObjects();
-        console.log('📂 Текущих объектов в IndexedDB:', currentObjects.length);
-        
-        // Отправляем ВСЕ текущие объекты (они уже содержат все изменения)
-        if (currentObjects.length > 0) {
-          console.log('📤 Отправка всех данных на сервер:', currentObjects.length, 'объектов');
-          console.log('📊 Пример объекта:', currentObjects[0]?.name, 'с', currentObjects[0]?.visits?.length, 'посещениями');
-          
-          const syncResponse = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-            method: 'POST',
-            mode: 'cors',
-            credentials: 'omit',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'sync',
-              objects: currentObjects,
-              users: []
-            })
-          });
-          
-          if (syncResponse.ok) {
-            const syncResult = await syncResponse.json();
-            console.log('✅ Результат синхронизации:', syncResult);
-            
-            // Очищаем очередь после успешной синхронизации
-            await offlineStorage.clearAllPendingSync();
-            console.log('✅ Очередь синхронизации очищена');
-          } else {
-            console.error('❌ Ошибка синхронизации:', syncResponse.status);
-            throw new Error(`Ошибка синхронизации: ${syncResponse.status}`);
-          }
-        }
-      }
-      
-      // Загружаем свежие данные с сервера
-      try {
-        const response = await fetch('https://functions.poehali.dev/b79c8b0e-36c3-4ab2-bb2b-123cec40662a', {
-          method: 'GET',
-          mode: 'cors',
-          credentials: 'omit',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          
-          if (result.status === 'success' && result.data) {
-            const serverObjects = result.data.objects || [];
-            const serverUsers = result.data.users || [];
-            
-            setObjects(serverObjects);
-            setUsers(serverUsers);
-            
-            // Сохраняем в IndexedDB
-            await offlineStorage.saveObjects(serverObjects);
-            await offlineStorage.saveUsers(serverUsers);
-            
-            // Обновляем выбранный объект если он открыт
-            if (selectedObject) {
-              const updatedSelectedObject = serverObjects.find(obj => obj.id === selectedObject.id);
-              if (updatedSelectedObject) {
-                setSelectedObject(updatedSelectedObject);
-              }
-            }
-            
-            localStorage.setItem('mchs_users', JSON.stringify(serverUsers));
-            
-            console.log('✅ Синхронизация завершена:', serverObjects.length, 'объектов,', serverUsers.length, 'пользователей');
-          }
-        } else {
-          console.warn('⚠️ Не удалось загрузить свежие данные с сервера:', response.status);
-        }
-      } catch (fetchError) {
-        console.warn('⚠️ Ошибка загрузки с сервера:', fetchError);
-      }
-      
-      // Показываем результат (даже если загрузка с сервера не удалась)
-      const message = pendingItems.length > 0 
-        ? `✅ Синхронизировано ${pendingItems.length} офлайн записей`
-        : '✅ Данные синхронизированы с сервером';
-      alert(message);
-      
-    } catch (error) {
-      console.error('❌ Ошибка синхронизации:', error);
-      alert('❌ Не удалось синхронизировать. Проверьте подключение к интернету.');
-    }
-  };
 
-  const handleSaveVisit = async (visit: Omit<Visit, 'id' | 'createdAt'>) => {
+
+  const handleSaveVisit = (visit: Omit<Visit, 'id' | 'createdAt'>) => {
     if (!selectedObject) return;
 
-    try {
-      const newVisit: Visit = {
-        ...visit,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
+    const newVisit: Visit = {
+      ...visit,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
 
-      const updatedObjects = objects.map(obj => 
-        obj.id === selectedObject.id
-          ? { ...obj, visits: [...obj.visits, newVisit] }
-          : obj
-      );
+    const updatedObjects = objects.map(obj => 
+      obj.id === selectedObject.id
+        ? { ...obj, visits: [...obj.visits, newVisit] }
+        : obj
+    );
 
-      await updateObjects(updatedObjects);
+    updateObjects(updatedObjects);
 
-      setSelectedObject(prev => 
-        prev ? { ...prev, visits: [...prev.visits, newVisit] } : null
-      );
+    setSelectedObject(prev => 
+      prev ? { ...prev, visits: [...prev.visits, newVisit] } : null
+    );
 
-      setCurrentScreen('history');
-    } catch (error) {
-      console.error('Save visit error:', error);
-      alert('Ошибка сохранения посещения. Попробуйте еще раз.');
-    }
+    setCurrentScreen('history');
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <OfflineIndicator />
       {currentScreen === 'login' && <LoginScreen onLogin={handleLogin} />}
       
       {currentScreen === 'objects' && (
@@ -492,7 +254,6 @@ function Index() {
           userName={userName}
           onSelectObject={handleSelectObject}
           onOpenDirectorPanel={handleOpenDirectorPanel}
-          onSync={handleSync}
         />
       )}
       
@@ -504,14 +265,13 @@ function Index() {
           onBack={handleBackToObjects}
           onCreateVisit={handleCreateVisit}
           onCreateTask={handleCreateTask}
-          onSync={handleSync}
-          onUpdateObject={async (updatedObject) => {
+          onUpdateObject={(updatedObject) => {
             console.log('ObjectHistoryScreen onUpdateObject called with:', updatedObject);
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
             );
             console.log('Calling updateObjects with updated list');
-            await updateObjects(updatedObjects);
+            updateObjects(updatedObjects);
             setSelectedObject(updatedObject);
             console.log('setSelectedObject called with updated object');
           }}
@@ -524,7 +284,6 @@ function Index() {
           userName={userName}
           onBack={handleBackToHistory}
           onSave={handleSaveVisit}
-          onSync={handleSync}
         />
       )}
       
@@ -534,12 +293,11 @@ function Index() {
           userName={userName}
           userRole={userRole}
           onBack={handleBackToHistory}
-          onSync={handleSync}
-          onSave={async (updatedObject) => {
+          onSave={(updatedObject) => {
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
             );
-            await updateObjects(updatedObjects);
+            updateObjects(updatedObjects);
             setSelectedObject(updatedObject);
           }}
         />
@@ -550,11 +308,11 @@ function Index() {
           object={selectedObject}
           userName={userName}
           onBack={handleBackToObjects}
-          onUpdateObject={async (updatedObject) => {
+          onUpdateObject={(updatedObject) => {
             const updatedObjects = objects.map(obj => 
               obj.id === updatedObject.id ? updatedObject : obj
             );
-            await updateObjects(updatedObjects);
+            updateObjects(updatedObjects);
             setSelectedObject(updatedObject);
           }}
         />

@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
-import SyncButton from '@/components/SyncButton';
 import { api } from '@/lib/api';
 import type { SiteObject, Visit } from '@/pages/Index';
 
@@ -13,15 +12,13 @@ interface CreateVisitScreenProps {
   userName: string;
   onBack: () => void;
   onSave: (visit: Omit<Visit, 'id' | 'createdAt'>) => void;
-  onSync?: () => Promise<void>;
 }
 
 export default function CreateVisitScreen({ 
   object, 
   userName,
   onBack, 
-  onSave,
-  onSync
+  onSave
 }: CreateVisitScreenProps) {
   const [visitType, setVisitType] = useState<'planned' | 'unplanned' | null>(null);
   const [comment, setComment] = useState('');
@@ -150,7 +147,6 @@ export default function CreateVisitScreen({
               <Icon name="ArrowLeft" size={18} className="mr-2" />
               Назад
             </Button>
-            {onSync && <SyncButton onSync={onSync} />}
           </div>
           
           <div>

@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
-import SyncButton from '@/components/SyncButton';
 import type { SiteObject } from '@/pages/Index';
 
 interface ObjectHeaderProps {
@@ -10,7 +9,6 @@ interface ObjectHeaderProps {
   onBack: () => void;
   onCreateVisit: () => void;
   onCreateTask: () => void;
-  onSync?: () => Promise<void>;
 }
 
 export default function ObjectHeader({
@@ -18,8 +16,7 @@ export default function ObjectHeader({
   userRole,
   onBack,
   onCreateVisit,
-  onCreateTask,
-  onSync
+  onCreateTask
 }: ObjectHeaderProps) {
   return (
     <>
@@ -32,7 +29,6 @@ export default function ObjectHeader({
           <Icon name="ArrowLeft" size={18} className="mr-2" />
           Назад к объектам
         </Button>
-        {onSync && <SyncButton onSync={onSync} />}
       </div>
       
       <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
